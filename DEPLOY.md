@@ -63,6 +63,30 @@ key 由 `app/api/humanize/route.ts` 在服务端读取，**永不进浏览器、
 
 ---
 
+## Stripe 付费墙配置（Pro 订阅 $9/月）
+
+代码已接好真实 Stripe Checkout（用**测试模式 key** 即可完整跑通支付流程）：
+- `app/api/checkout/route.ts`：创建订阅 Checkout 会话，返回 Stripe 支付链接
+- `app/api/verify/route.ts`：支付成功回跳后校验会话，解锁 Pro 无限额度
+- `app/app/page.tsx`：免费 500 词/日额度 + 超限升级卡 + Pro 徽章
+
+在 Vercel 环境变量再加两项（同样 Environments 全选）：
+```
+Name:  STRIPE_SECRET_KEY
+Value: sk_test_...（Stripe 后台 Developers → API keys → Secret key，测试模式）
+```
+```
+Name:  STRIPE_PRICE_ID
+Value: price_...（Stripe 后台 Product 里建一个 $9/月 的订阅价格，复制它的 Price ID）
+```
+可选 `NEXT_PUBLIC_SITE_URL` = 你的线上域名（用于拼接 success/cancel 回跳地址；不填则用请求来源 origin）。
+
+本地调试：在 `.env.local` 同样加这两行，`npm run dev` 即可走 Stripe 测试支付（测试卡号 `4242 4242 4242 4242`）。
+
+> 注意：当前为无注册 MVP，Pro 状态存浏览器 localStorage + 服务端 `/api/verify` 校验支付，能防普通篡改、够验证付费意愿。生产环境应加用户账户系统 + Stripe Webhook 做服务端订阅状态 authoritative 记录。
+
+---
+
 ## 验证上线成功
 
 打开线上地址 → 粘一段 AI 文本 → 点 Humanize → 服务端用环境变量里的 key 调 DeepSeek 返回结果。
