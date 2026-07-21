@@ -4,6 +4,32 @@
 
 ---
 
+## 方式 C：一键自动部署（最省事，推荐）✨
+
+脚本 `scripts/deploy.mjs` 把"建 Stripe 价格 + 部署 Vercel + 建 Webhook + 配 5 个环境变量"全部自动化。你只需在 Stripe / Vercel 后台各生成一个 token，然后跑一条命令，其余全自动。
+
+**前提：你给我两个 token（粘贴到对话里即可）**
+- `VERCEL_TOKEN`：Vercel 后台 → Account Settings → Tokens → 生成一个（如 `vc_xxx`）
+- `STRIPE_SECRET_KEY`：Stripe 后台 → Developers → API keys → 复制 Secret key（`sk_test_...` 测试 / `sk_live_...` 正式）
+
+> 安全提示：token 只在本次部署命令里用，跑完即可在后台 revoke。不想把 token 给我也行，见下方"方式 A/B 手动"。
+
+**跑法（在 `notecleaner-next` 目录）**：
+```bash
+VERCEL_TOKEN=vc_xxx STRIPE_SECRET_KEY=sk_test_xxx npm run deploy
+```
+（Windows PowerShell 用 `$env:VERCEL_TOKEN="vc_xxx"; $env:STRIPE_SECRET_KEY="sk_test_xxx"; npm run deploy`）
+
+脚本会自动：
+1. 在 Stripe 创建/复用 **Pro $9** 与 **Ultra $29** 两个订阅价格 → 拿到 Price ID
+2. `vercel deploy --prod` 上线 → 拿到 `*.vercel.app` 域名
+3. 在 Stripe 建指向 `{域名}/api/webhook/stripe` 的 Webhook → 拿到签名密钥
+4. 把 `DEEPSEEK_API_KEY` / `STRIPE_SECRET_KEY` / `STRIPE_PRICE_PRO` / `STRIPE_PRICE_ULTRA` / `STRIPE_WEBHOOK_SECRET` 全部写入 Vercel 并触发重部署
+
+跑完直接拿到线上地址 + 两个 Price ID，无需手动进任何后台填表。
+
+---
+
 ## 方式 A：拖文件夹直接部署（最快，不用 GitHub）
 
 1. 打开 https://vercel.com/new
