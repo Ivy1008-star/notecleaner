@@ -63,39 +63,58 @@ key 由 `app/api/humanize/route.ts` 在服务端读取，**永不进浏览器、
 
 ---
 
-## Stripe 付费墙配置（Pro 订阅 $9/月）
+## Stripe 付费墙配置（三档：Free / Pro $9 / Ultra $29）
 
-代码已接好真实 Stripe Checkout（用**测试模式 key** 即可完整跑通支付流程）：
-- `app/api/checkout/route.ts`：创建订阅 Checkout 会话，返回 Stripe 支付链接
-- `app/api/verify/route.ts`：支付成功回跳后校验会话，解锁 Pro 无限额度
-- `app/app/page.tsx`：免费 500 词/日额度 + 超限升级卡 + Pro 徽章
+代码已接好真实 Stripe Checkout 订阅 + **Webhook 订阅状态**（`stripe listen` 或线上 Webhook 均可）：
 
-在 Vercel 环境变量再加两项（同样 Environments 全选）：
-```
-Name:  STRIPE_SECRET_KEY
-Value: sk_test_...（Stripe 后台 Developers → API keys → Secret key，测试模式）
-```
-```
-Name:  STRIPE_PRICE_ID
-Value: price_...（Stripe 后台 Product 里建一个 $9/月 的订阅价格，复制它的 Price ID）
-```
-可选 `NEXT_PUBLIC_SITE_URL` = 你的线上域名（用于拼接 success/cancel 回跳地址；不填则用请求来源 origin）。
+| 文件 | 作用 |
+|---|---|
+| `lib/plans.ts` | 三档套餐配置（档位/价格/词额度/对应 Price 环境变量） |
+| `app/api/checkout/route.ts` | 按档位创建订阅 Checkout 会话，返回 Stripe 支付链接 |
+| `app/api/verify/route.ts` | 支付成功回跳后校验 session，返回真实 subscriptionId + 档位 |
+| `app/api/subscription/route.ts` | **实时向 Stripe 查询订阅状态**（真相来源，永远准确） |
+| `app/api/webhook/stripe/route.ts` | **签名验证 + 订阅状态同步**（付款/续费/取消事件） |
 
-本地调试：在 `.env.local` 同样加这两行，`npm run dev` 即可走 Stripe 测试支付（测试卡号 `4242 4242 4242 4242`）。
+### 第 1 步：Stripe 后台建两个订阅价格
+1. Stripe 后台 → **Product catalog → + Add product**
+2. 建产品 `NoteCleaner Pro`，选 **Recurring**，$9.00 / month，复制生成的 **Price ID**（形如 `price_xxx`）→ 填入环境变量 `STRIPE_PRICE_PRO`
+3. 再建 `NoteCleaner Ultra`，$29.00 / month，复制 Price ID → 填入 `STRIPE_PRICE_ULTRA`
+4. Developers → API keys → 复制 **Secret key**（`sk_test_...` 测试 / `sk_live_...` 正式）→ 填入 `STRIPE_SECRET_KEY`
 
-> 注意：当前为无注册 MVP，Pro 状态存浏览器 localStorage + 服务端 `/api/verify` 校验支付，能防普通篡改、够验证付费意愿。生产环境应加用户账户系统 + Stripe Webhook 做服务端订阅状态 authoritative 记录。
+### 第 2 步：Webhook 配置（订阅状态下发）
+- **本地调试**：装 Stripe CLI 后运行
+  ```bash
+  stripe listen --forward-to localhost:3000/api/webhook/stripe
+  ```
+  终端会打印 `whsec_...` → 填入 `STRIPE_WEBHOOK_SECRET`。
+- **线上**：Stripe 后台 → **Developers → Webhooks → + Add endpoint**，URL 填 `https://你的域名/api/webhook/stripe`，订阅事件勾 `checkout.session.completed` 和 `customer.subscription.*`，保存后复制 **Signing secret** → 填进 Vercel 环境变量 `STRIPE_WEBHOOK_SECRET`。
+
+### 第 3 步：Vercel 环境变量（Environments 全选）
+```
+DEEPSEEK_API_KEY   = sk-...（你的 key）
+STRIPE_SECRET_KEY  = sk_test_...
+STRIPE_PRICE_PRO   = price_...（Pro $9/月 Price ID）
+STRIPE_PRICE_ULTRA = price_...（Ultra $29/月 Price ID）
+STRIPE_WEBHOOK_SECRET = whsec_...（本地 stripe listen / 线上 Webhook 签名密钥）
+NEXT_PUBLIC_SITE_URL = https://你的域名.vercel.app（可选）
+```
+> 改了环境变量必须 **Redeploy** 才生效（Deployments → 最新 → ... → Redeploy）。
+
+本地调试：`.env.local` 同样加这些，测试卡号 `4242 4242 4242 4242` 可走完整支付+Webhook。
 
 ---
 
 ## 验证上线成功
 
-打开线上地址 → 粘一段 AI 文本 → 点 Humanize → 服务端用环境变量里的 key 调 DeepSeek 返回结果。
-如果返回 "Server is missing DEEPSEEK_API_KEY" 之类的错，说明环境变量没加或没重部署。
+1. 打开线上地址 → 粘一段 AI 文本 → 点 Humanize → 服务端用 `DEEPSEEK_API_KEY` 调 DeepSeek 返回结果。
+2. 点定价区的 **Go Pro / Go Ultra** → 跳 Stripe 测试支付 → 回跳 `/app` → 徽章变 PRO/ULTRA、额度解锁（状态由 `/api/subscription` 实时问 Stripe 得到）。
+3. 若报 "Server is missing DEEPSEEK_API_KEY" → 环境变量没加或没重部署。
+4. 若付费后仍显示 Free → 检查 `STRIPE_PRICE_PRO/ULTRA` 是否和 Stripe 后台 Price ID 完全一致（反查靠这个）。
 
 ## 备注
 
-- `.env.local` 已被 gitignore，**不会**被推送，安全。
-- `distDir` 是标准 `.next`。
+- `.env.local` 与 `.data/`（本地订阅缓存）已被 gitignore，**不会**被推送，安全。
+- 订阅状态以 **Stripe 为唯一真相来源**：`/api/subscription` 每次实时查询，即使 Webhook 没配也能正确判断档位；Webhook 用于及时同步状态、触发副作用（生产可接邮件/KV）。
 - Vercel 上的构建不受本地沙箱限制，能正常完成。
 - 本机未装 `vercel` CLI，无法用命令行加环境变量；如需 CLI 方式：`npx vercel env add DEEPSEEK_API_KEY` 后按提示登录再粘贴值。
 - 你贴在聊天里的 DeepSeek key 已暴露，上线前建议去 DeepSeek 后台 revoke 换一个新的，并同步更新 `.env.local` 和 Vercel 环境变量。

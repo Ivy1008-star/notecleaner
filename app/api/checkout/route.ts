@@ -1,40 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import { getStripe } from '@/lib/stripe'
+import { PLANS, TierId } from '@/lib/plans'
 
 export const runtime = 'nodejs'
 
-// Creates a Stripe Checkout Session for the Pro monthly subscription.
-// Key is read server-side only; the returned URL redirects the browser to Stripe.
+// 按档位创建 Stripe Checkout 订阅会话。
+// key 只在服务端读取，返回的 url 让浏览器跳去 Stripe 付款。
 export async function POST(req: NextRequest) {
   const secretKey = process.env.STRIPE_SECRET_KEY
-  const priceId = process.env.STRIPE_PRICE_ID
+  if (!secretKey) {
+    return NextResponse.json(
+      { error: 'Stripe is not configured. Add STRIPE_SECRET_KEY.' },
+      { status: 500 }
+    )
+  }
 
-  if (!secretKey || !priceId) {
+  let body: { tier?: string }
+  try {
+    body = await req.json()
+  } catch {
+    body = {}
+  }
+
+  const tier = (body.tier as TierId) || 'pro'
+  const plan = PLANS[tier]
+  if (!plan || plan.priceMonthly === 0) {
+    return NextResponse.json(
+      { error: 'Invalid or free tier. Free needs no checkout.' },
+      { status: 400 }
+    )
+  }
+
+  const priceId = plan.priceIdEnv ? process.env[plan.priceIdEnv] : undefined
+  if (!priceId) {
     return NextResponse.json(
       {
-        error:
-          'Stripe is not configured. Add STRIPE_SECRET_KEY and STRIPE_PRICE_ID environment variables (test mode keys work).',
+        error: `Missing Stripe price for ${plan.id}. Set ${plan.priceIdEnv} in environment variables.`,
       },
       { status: 500 }
     )
   }
 
-  const stripe = new Stripe(secretKey)
-  const origin =
-    req.headers.get('origin') ||
+  const stripe = getStripe()
+  const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL ||
+    req.headers.get('origin') ||
     'http://localhost:3000'
 
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/app?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/app`,
+      success_url: `${siteUrl}/app?upgrade=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/app?upgrade=cancelled`,
       allow_promotion_codes: true,
-      // No-signup MVP: we don't create a Customer object. After payment the
-      // client verifies the session via /api/verify and stores the Pro flag
-      // locally. Production should add a user account + webhook instead.
+      client_reference_id: plan.id, // 记录用户选了哪个档位
+      metadata: { tier: plan.id },
     })
 
     return NextResponse.json({ url: session.url })

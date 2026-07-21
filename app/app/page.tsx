@@ -2,20 +2,33 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { PlanButton } from '../PricingActions'
 
-const FREE_DAILY_WORDS = 500
-const LS_PRO = 'nc_pro'
-const LS_DATE = 'nc_quota_date'
-const LS_USED = 'nc_quota_used'
+type TierId = 'free' | 'pro' | 'ultra'
 
-function todayKey() {
-  return new Date().toISOString().slice(0, 10)
+const LIMITS: Record<TierId, number> = { free: 500, pro: 50000, ultra: 500000 }
+const LS_SUB = 'nc_sub'
+const LS_WINDOW = 'nc_window'
+const LS_USED = 'nc_used'
+
+function windowKey(tier: TierId): string {
+  const now = new Date()
+  // 免费按天清零，付费按月清零
+  return tier === 'free'
+    ? 'day:' + now.toISOString().slice(0, 10)
+    : 'month:' + now.toISOString().slice(0, 7)
 }
 
-function countWords(text: string) {
+function countWords(text: string): number {
   const t = text.trim()
   if (!t) return 0
   return t.split(/\s+/).length
+}
+
+function tierLabel(tier: TierId): string {
+  if (tier === 'ultra') return 'ULTRA · 500k/mo'
+  if (tier === 'pro') return 'PRO · 50k/mo'
+  return 'FREE · 500/day'
 }
 
 export default function HumanizeTool() {
@@ -26,23 +39,40 @@ export default function HumanizeTool() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const [pro, setPro] = useState(false)
+  const [tier, setTier] = useState<TierId>('free')
   const [usedWords, setUsedWords] = useState(0)
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [verifying, setVerifying] = useState(false)
 
   useEffect(() => {
-    setPro(localStorage.getItem(LS_PRO) === '1')
+    // 1) 本地已有的 subscriptionId → 实时问 Stripe 拿权威档位
+    const subId = localStorage.getItem(LS_SUB)
+    if (subId) {
+      setVerifying(true)
+      fetch(`/api/subscription?sub=${encodeURIComponent(subId)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.tier && d.tier !== 'free') {
+            setTier(d.tier as TierId)
+          } else {
+            localStorage.removeItem(LS_SUB)
+          }
+        })
+        .catch(() => {})
+        .finally(() => setVerifying(false))
+    }
 
-    const d = todayKey()
-    if (localStorage.getItem(LS_DATE) === d) {
+    // 2) 重置周期：窗口变了就清零已用额度
+    const wk = windowKey(tier)
+    if (localStorage.getItem(LS_WINDOW) === wk) {
       setUsedWords(Number(localStorage.getItem(LS_USED) || '0'))
     } else {
-      localStorage.setItem(LS_DATE, d)
+      localStorage.setItem(LS_WINDOW, wk)
       localStorage.setItem(LS_USED, '0')
       setUsedWords(0)
     }
 
+    // 3) 从 Stripe 回跳（带上 session_id）→ 校验并落 subscriptionId
     const params = new URLSearchParams(window.location.search)
     const sid = params.get('session_id')
     if (sid) {
@@ -53,10 +83,10 @@ export default function HumanizeTool() {
         body: JSON.stringify({ sessionId: sid }),
       })
         .then((r) => r.json())
-        .then((data) => {
-          if (data.pro) {
-            localStorage.setItem(LS_PRO, '1')
-            setPro(true)
+        .then((d) => {
+          if (d.tier && d.tier !== 'free') {
+            setTier(d.tier as TierId)
+            if (d.subscriptionId) localStorage.setItem(LS_SUB, d.subscriptionId)
           }
         })
         .catch(() => {})
@@ -65,18 +95,20 @@ export default function HumanizeTool() {
           window.history.replaceState({}, '', '/app')
         })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function persistUsed(next: number) {
     setUsedWords(next)
     localStorage.setItem(LS_USED, String(next))
-    localStorage.setItem(LS_DATE, todayKey())
+    localStorage.setItem(LS_WINDOW, windowKey(tier))
   }
 
   async function handleSubmit() {
     if (!text.trim()) return
     const words = countWords(text)
-    if (!pro && usedWords + words > FREE_DAILY_WORDS) {
+    const limit = LIMITS[tier]
+    if (usedWords + words > limit) {
       setShowUpgrade(true)
       return
     }
@@ -92,7 +124,8 @@ export default function HumanizeTool() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Request failed')
       setResult(data.result)
-      if (!pro) persistUsed(usedWords + words)
+      // 免费档和付费档都计额度（付费档额度大，主要做展示）
+      persistUsed(usedWords + words)
       setShowUpgrade(false)
     } catch (e: any) {
       setError(e?.message || 'Something went wrong. Please try again.')
@@ -100,19 +133,10 @@ export default function HumanizeTool() {
     setLoading(false)
   }
 
-  async function handleUpgrade() {
-    try {
-      const res = await fetch('/api/checkout', { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Checkout failed')
-      if (data.url) window.location.href = data.url
-      else throw new Error('No checkout URL returned')
-    } catch (e: any) {
-      setError(e?.message || 'Could not start checkout.')
-    }
-  }
-
-  const remaining = Math.max(0, FREE_DAILY_WORDS - usedWords)
+  const limit = LIMITS[tier]
+  const remaining = Math.max(0, limit - usedWords)
+  const isUnlimited = tier === 'ultra'
+  const usedPct = Math.min(100, (usedWords / limit) * 100)
 
   return (
     <>
@@ -120,10 +144,10 @@ export default function HumanizeTool() {
         <div className="container toolbar">
           <Link href="/" className="logo"><span className="logo-dot" />NoteCleaner</Link>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            {pro ? (
-              <span className="pro-badge">PRO · Unlimited</span>
+            {tier !== 'free' ? (
+              <span className="pro-badge">{tierLabel(tier)}</span>
             ) : (
-              <button onClick={handleUpgrade} className="upgrade-btn">Upgrade to Pro</button>
+              <span className="free-badge">FREE</span>
             )}
             <Link href="/" className="back-link">← Home</Link>
           </div>
@@ -134,31 +158,48 @@ export default function HumanizeTool() {
         <h1>Humanize your text</h1>
         <p className="lead">Paste AI-generated text, pick a mode and strength, and get natural writing back.</p>
 
-        {!pro && (
+        {tier === 'free' || !isUnlimited ? (
           <div className="quota-bar">
             <div className="quota-track">
-              <div className="quota-fill" style={{ width: `${Math.min(100, (usedWords / FREE_DAILY_WORDS) * 100)}%` }} />
+              <div
+                className="quota-fill"
+                style={{ width: isUnlimited ? '100%' : `${usedPct}%` }}
+              />
             </div>
             <span className="quota-text">
-              {remaining} words left today ·{' '}
-              <button className="link-btn" onClick={handleUpgrade}>Upgrade for unlimited</button>
+              {isUnlimited
+                ? 'Unlimited words · Pro/Ultra plan'
+                : `${remaining.toLocaleString()} words left${
+                    tier === 'free' ? ' today' : ' this month'
+                  } · `}
+              {tier === 'free' && (
+                <button className="link-btn" onClick={() => setShowUpgrade(true)}>
+                  Upgrade for more
+                </button>
+              )}
             </span>
           </div>
-        )}
+        ) : null}
 
         {showUpgrade && (
-          <div className="upgrade-card">
-            <h3>You&apos;ve hit the free limit</h3>
-            <p>
-              The free plan includes {FREE_DAILY_WORDS} words per day. Go Pro for unlimited
-              humanizing, faster results, and no daily cap.
-            </p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', margin: '14px 0' }}>
-              <span style={{ fontSize: '32px', fontWeight: 800, color: 'var(--ink)' }}>$9</span>
-              <span style={{ color: 'var(--slate)' }}>/ month</span>
+          <div className="upgrade-modal">
+            <h3>You&apos;ve hit the {tier === 'free' ? 'daily' : 'monthly'} limit</h3>
+            <p>Pick a plan to keep humanizing. Cancel anytime.</p>
+            <div className="upgrade-tiers">
+              <div className="ut">
+                <h4>Pro</h4>
+                <div className="ut-price">$9<small>/mo</small></div>
+                <p>50,000 words / month</p>
+                <PlanButton tier="pro" label="Choose Pro" />
+              </div>
+              <div className="ut featured">
+                <h4>Ultra</h4>
+                <div className="ut-price">$29<small>/mo</small></div>
+                <p>500,000 words / month + team</p>
+                <PlanButton tier="ultra" label="Choose Ultra" variant="ghost" />
+              </div>
             </div>
-            <button onClick={handleUpgrade} className="upgrade-cta">Upgrade to Pro — $9/mo</button>
-            <button className="link-btn" onClick={() => setShowUpgrade(false)} style={{ marginLeft: 12 }}>
+            <button className="link-btn" onClick={() => setShowUpgrade(false)} style={{ marginTop: 12 }}>
               Maybe later
             </button>
           </div>
@@ -284,7 +325,9 @@ export default function HumanizeTool() {
         )}
 
         <p style={{ marginTop: '40px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>
-          {pro ? 'Pro plan · unlimited words · we never store your text' : `Free tier: ${FREE_DAILY_WORDS} words / day · We never store your text`}
+          {tier === 'free'
+            ? 'Free tier: 500 words / day · We never store your text'
+            : `${tierLabel(tier)} · we never store your text`}
         </p>
       </div>
     </>

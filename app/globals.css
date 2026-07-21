@@ -261,9 +261,9 @@ a { color: inherit; text-decoration: none; }
 /* ---------- Pricing ---------- */
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 22px;
-  max-width: 720px;
+  max-width: 960px;
   margin: 0 auto;
 }
 .plan {
@@ -271,8 +271,11 @@ a { color: inherit; text-decoration: none; }
   border-radius: var(--radius);
   padding: 30px;
   background: #fff;
+  display: flex;
+  flex-direction: column;
 }
 .plan.pro { border-color: var(--blue); box-shadow: var(--shadow-lg); position: relative; }
+.plan.ultra { border-color: #7c3aed; }
 .plan .ribbon {
   position: absolute;
   top: -12px;
@@ -288,9 +291,16 @@ a { color: inherit; text-decoration: none; }
 .plan h3 { font-size: 20px; margin: 0 0 6px; }
 .plan .price { font-size: 36px; font-weight: 800; margin: 8px 0; }
 .plan .price small { font-size: 15px; font-weight: 500; color: var(--muted); }
-.plan ul { list-style: none; padding: 0; margin: 18px 0 24px; }
+.plan ul { list-style: none; padding: 0; margin: 18px 0 24px; flex: 1; }
 .plan li { padding: 7px 0; color: var(--slate); font-size: 15px; display: flex; gap: 10px; }
 .plan li::before { content: "✓"; color: var(--green); font-weight: 700; }
+.plan .btn { margin-top: auto; }
+.pricing-note {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 22px;
+}
 
 /* ---------- FAQ ---------- */
 .faq { max-width: 760px; margin: 0 auto; }
@@ -344,6 +354,18 @@ a { color: inherit; text-decoration: none; }
   border-radius: 999px;
   background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.free-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--slate);
+  border: 1px solid var(--border);
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -414,3 +436,32 @@ a { color: inherit; text-decoration: none; }
   transition: transform 0.15s;
 }
 .upgrade-cta:hover { transform: translateY(-1px); }
+
+/* ---------- Upgrade modal (3 tiers) ---------- */
+.upgrade-modal {
+  margin: 0 0 24px;
+  padding: 26px;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #fbfdff, #eff6ff);
+  box-shadow: var(--shadow);
+}
+.upgrade-modal h3 { margin: 0 0 6px; font-size: 20px; color: var(--ink); }
+.upgrade-modal > p { margin: 0 0 18px; color: var(--slate); font-size: 15px; }
+.upgrade-tiers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.ut {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  background: #fff;
+  text-align: center;
+}
+.ut.featured { border-color: #7c3aed; }
+.ut h4 { margin: 0 0 4px; font-size: 18px; color: var(--ink); }
+.ut-price { font-size: 30px; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+.ut-price small { font-size: 14px; font-weight: 500; color: var(--muted); }
+.ut p { margin: 0 0 16px; color: var(--slate); font-size: 14px; }

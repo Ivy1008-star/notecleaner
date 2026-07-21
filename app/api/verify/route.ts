@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import { getStripe } from '@/lib/stripe'
+import { tierFromPriceId } from '@/lib/plans'
 
 export const runtime = 'nodejs'
 
-// Verifies a Stripe Checkout Session after the user is redirected back from
-// Stripe. Returns whether the Pro subscription was paid so the client can
-// unlock unlimited usage. Server-side check prevents trivial client spoofing.
+// 用户从 Stripe 回跳后，用 session_id 校验付款是否成功，
+// 并返回真实的 subscriptionId + 档位（服务端校验，防前端伪造）。
 export async function POST(req: NextRequest) {
   const secretKey = process.env.STRIPE_SECRET_KEY
   if (!secretKey) {
@@ -24,15 +24,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing session_id.' }, { status: 400 })
   }
 
-  const stripe = new Stripe(secretKey)
+  const stripe = getStripe()
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId)
-    const paid =
-      session.payment_status === 'paid' || session.status === 'complete'
+    const paid = session.payment_status === 'paid' || session.status === 'complete'
+    if (!paid) {
+      return NextResponse.json({ tier: 'free', status: session.status })
+    }
+
+    const subId = typeof session.subscription === 'string' ? session.subscription : null
+    if (!subId) {
+      return NextResponse.json({ tier: 'free', status: session.status })
+    }
+
+    const sub = await stripe.subscriptions.retrieve(subId)
+    const tier = tierFromPriceId(sub.items.data[0]?.price?.id)
+    const active = sub.status === 'active' || sub.status === 'trialing'
+
     return NextResponse.json({
-      pro: paid,
-      status: session.status,
-      paymentStatus: session.payment_status,
+      tier: active ? tier : 'free',
+      subscriptionId: subId,
+      status: sub.status,
     })
   } catch (e: any) {
     return NextResponse.json(

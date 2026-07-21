@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { PlanButton } from './PricingActions'
 
 export default function Home() {
   return (
@@ -144,7 +145,7 @@ export default function Home() {
         <div className="container">
           <div className="section-head">
             <h2>Simple pricing</h2>
-            <p>Start free. Upgrade when you need more.</p>
+            <p>Start free. Upgrade when you need more. Cancel anytime.</p>
           </div>
           <div className="pricing-grid">
             <div className="plan">
@@ -154,23 +155,39 @@ export default function Home() {
                 <li>500 words / day</li>
                 <li>All 5 writing modes</li>
                 <li>All 5 strength levels</li>
-                <li>No credit card</li>
+                <li>No credit card required</li>
               </ul>
-              <Link href="/app" className="btn btn-ghost" style={{ width: '100%' }}>Start free</Link>
+              <PlanButton tier="free" label="Start free" variant="ghost" />
             </div>
             <div className="plan pro">
               <span className="ribbon">Most popular</span>
               <h3>Pro</h3>
               <div className="price">$9<small> / month</small></div>
               <ul>
-                <li>Unlimited words</li>
+                <li>50,000 words / month</li>
                 <li>Priority processing</li>
                 <li>Batch paste support</li>
+                <li>Rewrite history</li>
                 <li>Early new features</li>
               </ul>
-              <Link href="/app" className="btn btn-primary" style={{ width: '100%' }}>Go Pro</Link>
+              <PlanButton tier="pro" label="Go Pro" />
+            </div>
+            <div className="plan ultra">
+              <h3>Ultra</h3>
+              <div className="price">$29<small> / month</small></div>
+              <ul>
+                <li>500,000 words / month</li>
+                <li>Batch / file upload</li>
+                <li>API access (soon)</li>
+                <li>Priority support</li>
+                <li>Up to 3 team seats</li>
+              </ul>
+              <PlanButton tier="ultra" label="Go Ultra" variant="ghost" />
             </div>
           </div>
+          <p className="pricing-note">
+            All paid plans are monthly subscriptions billed by Stripe. Prices shown in USD.
+          </p>
         </div>
       </section>
 
