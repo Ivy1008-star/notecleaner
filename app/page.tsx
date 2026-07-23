@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { PlanButton } from './PricingActions'
+import { GoogleAuth } from './GoogleAuth'
 
 export default function Home() {
   return (
@@ -12,6 +13,7 @@ export default function Home() {
             <a href="#features" className="hide-sm">Features</a>
             <a href="#pricing" className="hide-sm">Pricing</a>
             <a href="#faq" className="hide-sm">FAQ</a>
+            <GoogleAuth />
             <Link href="/app" className="btn btn-primary">Open Tool →</Link>
           </nav>
         </div>

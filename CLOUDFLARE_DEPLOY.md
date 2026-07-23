@@ -83,3 +83,39 @@ npm run deploy:cf        # wrangler pages deploy
 - 线上 Humanize 报错 "missing DEEPSEEK_API_KEY" → 环境变量没加或没重新部署。
 - API 路由（/api/*）报错 → 确认 `wrangler.toml` 有 `compatibility_flags = ["nodejs_compat"]`（本仓库已加）。
 - 付费后仍 Free → 检查 `STRIPE_PRICE_PRO/ULTRA` 与 Stripe 后台 Price ID 完全一致。
+
+---
+
+## 第 6 步：启用 Google 登录（出海站标配，纯 Edge 实现）
+
+> NoteCleaner 的 Google 登录**不依赖任何 Node 专属 SDK**：用 `jose`（Web Crypto）验 ID token、用原生 `fetch` 换 token，因此能在 Cloudflare Pages 的 Edge 运行时直接跑，不会把构建搞挂。路由：`/api/auth/google`（发起）、`/api/auth/google/callback`（回调）、`/api/auth/session`（读会话）、`/api/auth/logout`（退出）。
+
+### A. 在 Google Cloud Console 建 OAuth 客户端
+1. 打开 https://console.cloud.google.com/apis/credentials
+2. 顶部确认已创建 **OAuth 同意屏幕**（User Type 选 External，填产品名即可，先留测试阶段）
+3. **创建凭据 → OAuth 客户端 ID** → 应用类型选 **Web 应用**
+4. 名称随便（如 `notecleaner-pages`）
+5. **已获授权的重定向 URI** 加一条（部署后替换成你的真实域名）：
+   ```
+   https://notecleaner.<你的子域>.pages.dev/api/auth/google/callback
+   ```
+   > 本地调试可另加一条 `http://localhost:3000/api/auth/google/callback`
+6. 创建完拿到 **客户端 ID** 和 **客户端密钥**
+
+### B. 把变量加进 Cloudflare Pages 环境变量（第 3 步同一处）
+在 Production / Preview / Development **全选** 加：
+
+| 变量名 | 值 |
+|---|---|
+| `GOOGLE_CLIENT_ID` | 上面的客户端 ID（`xxx.apps.googleusercontent.com`） |
+| `GOOGLE_CLIENT_SECRET` | 上面的客户端密钥（secret_text） |
+| `AUTH_SECRET` | 一段 ≥32 字符的随机串，用于给会话 Cookie 签名（secret_text） |
+
+改完变量后**重新部署**生效。
+
+### C. 验证
+- 打开站点 → 点右上角 **Sign in with Google** → 跳 Google 授权页 → 授权后跳回 `/app`，右上角显示头像+邮箱。
+- 点 **Sign out** 清会话。
+- 未配 `GOOGLE_CLIENT_ID` 时点登录会返回 500 提示「not configured」，属正常。
+
+> 注意：Pages Functions 只有 Edge 运行时，没有 Node.js 运行时。所以 Stripe 这类 Node SDK 不能直接跑（本项目已将其路由暂改为 stub）；但 Google 登录全程用 `jose`+`fetch`，Edge 原生支持。

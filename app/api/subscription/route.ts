@@ -1,45 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStripe } from '@/lib/stripe'
-import { tierFromPriceId } from '@/lib/plans'
-import { saveSub } from '@/lib/subscriptions'
 
-export const runtime = 'nodejs'
+export const runtime = 'edge'
 
-// 实时向 Stripe 查询订阅状态（Stripe 是真相来源，状态永远准确）。
-// 客户端持有 subscriptionId → 这里拿它问 Stripe：还有效吗？是哪个档位？
+// 订阅状态查询。
+// 注意：Stripe 支付尚未接入本环境（Pages Edge 运行时不兼容 Stripe Node SDK，
+// 且当前未配置 STRIPE_SECRET_KEY）。此处统一返回 free，保证前端不会被报错打断。
+// 等接入 Stripe（建议升级到 Next 15 + Node.js 运行时后），再恢复向 Stripe 实时查询的逻辑。
 export async function GET(req: NextRequest) {
   const subId = req.nextUrl.searchParams.get('sub')
-  if (!subId) {
-    return NextResponse.json({ tier: 'free', status: 'none' })
-  }
-
-  try {
-    const stripe = getStripe()
-    const sub = await stripe.subscriptions.retrieve(subId)
-    const priceId = sub.items.data[0]?.price?.id
-    const tier = tierFromPriceId(priceId)
-    const active = sub.status === 'active' || sub.status === 'trialing'
-
-    // 顺手把最新状态落一份到本地缓存（生产可换成 KV/DB）
-    saveSub({
-      subscriptionId: subId,
-      customerId: typeof sub.customer === 'string' ? sub.customer : '',
-      tier,
-      status: sub.status,
-      updatedAt: Date.now(),
-    })
-
-    return NextResponse.json({
-      tier: active ? tier : 'free',
-      status: sub.status,
-      cancelAt: sub.cancel_at ? sub.cancel_at * 1000 : null,
-    })
-  } catch (e: any) {
-    // Stripe 查不到（key 缺失 / 订阅不存在）→ 兜底回免费，不报错阻断页面
-    return NextResponse.json({
-      tier: 'free',
-      status: 'error',
-      message: e?.message || 'lookup failed',
-    })
-  }
+  return NextResponse.json({
+    tier: 'free',
+    status: subId ? 'stripe_not_connected' : 'none',
+    message: 'Stripe payment is not connected yet. All users are on the free tier.',
+  })
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { PlanButton } from '../PricingActions'
+import { GoogleAuth } from '../GoogleAuth'
 
 type TierId = 'free' | 'pro' | 'ultra'
 type ModeId = 'notes' | 'essay' | 'report' | 'email' | 'social'
@@ -325,6 +326,7 @@ export default function HumanizeTool() {
             ) : (
               <span className="free-badge">FREE</span>
             )}
+            <GoogleAuth />
             <Link href="/" className="back-link">
               ← Home
             </Link>
