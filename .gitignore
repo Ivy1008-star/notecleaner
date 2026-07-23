@@ -11,3 +11,8 @@ node_modules
 
 *.tsbuildinfo
 .vercel
+
+# 临时诊断文件（CF API 排查时生成，勿入库）
+/_*.json
+/_root.html
+/_list.json
