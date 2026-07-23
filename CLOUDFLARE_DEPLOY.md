@@ -23,7 +23,8 @@
 1. 在仓库列表里搜 / 选 **`Ivy1008-star/notecleaner`** → 继续
 2. 构建设置（Cloudflare 选 **Next.js** 预设会自动填，确认一下）：
    - **Framework preset**：`Next.js`
-   - **Build command**：`npx @cloudflare/next-on-pages` （本仓库已封装为 `npm run pages:build`，两者等价）
+   - **Build command**：`npm run pages:build`
+     - ⚠️ **必须用 `npm run pages:build`，不要用裸 `npx @cloudflare/next-on-pages`**。本仓库的 `pages:build` 已封装为 `next build && npx @cloudflare/next-on-pages`。next-on-pages 适配器本身**不会**跑 `next build`，如果只跑适配器、Cloudflare 全新 clone 又没有缓存的 `.next`，就不会生成 `_worker.js`，导致线上 `uses_functions: false`、所有路由 404。链式 `next build` 是保证 worker 一定被产出的关键。
    - **Output directory**：`.vercel/output/static` ⚠️ **必须是 `static` 子目录，不能是 `.vercel/output`**
      - 原因：next-on-pages 把静态资源和 `_worker.js` 都放进 `.vercel/output/static/`。Cloudflare 只有把输出目录指到 `static/`，才会把 `index.html`/`_next/` 提到站点根、并把 `static/_worker.js` 当成 Functions Worker 跑起来。指到 `.vercel/output`（父目录）会导致所有路由 404（`uses_functions: false`）。
    - **Production branch**：`master`
@@ -69,7 +70,7 @@
 # 需要 CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID 两个环境变量（从 Cloudflare 后台拿）
 export CLOUDFLARE_API_TOKEN=xxx
 export CLOUDFLARE_ACCOUNT_ID=xxx
-npm run pages:build      # 等价于 npx @cloudflare/next-on-pages，产物到 .vercel/output
+npm run pages:build      # = next build && npx @cloudflare/next-on-pages，产物到 .vercel/output/static
 npm run deploy:cf        # wrangler pages deploy
 ```
 
@@ -84,6 +85,7 @@ npm run deploy:cf        # wrangler pages deploy
 - 线上 Humanize 报错 "missing DEEPSEEK_API_KEY" → 环境变量没加或没重新部署。
 - API 路由（/api/*）报错 → 确认 `wrangler.toml` 有 `compatibility_flags = ["nodejs_compat"]`（本仓库已加）。
 - 付费后仍 Free → 检查 `STRIPE_PRICE_PRO/ULTRA` 与 Stripe 后台 Price ID 完全一致。
+- **线上所有路由 404 / 部署详情 `uses_functions: false`** → 这是最隐蔽的坑：build command 只跑了 `npx @cloudflare/next-on-pages` 没先 `next build`，Cloudflare 全新构建没有 `.next` 可转换，于是没有 `_worker.js`。修法：build command 改成 `npm run pages:build`（已含 `next build &&`）。改完重新部署，部署详情里 `uses_functions` 应变 `true`，`/` 和 `/api/*` 才会活。
 
 ---
 

@@ -1,0 +1,143 @@
+{
+  "result": {
+    "id": "736ca89e-74ef-403a-9642-717de7e092ce",
+    "short_id": "736ca89e",
+    "project_id": "a798fc28-3a2c-4008-bdbc-d7cc09826149",
+    "project_name": "notecleaner",
+    "environment": "production",
+    "url": "https://736ca89e.notecleaner.pages.dev",
+    "created_on": "2026-07-23T08:54:01.501456Z",
+    "modified_on": "2026-07-23T08:54:03.571432Z",
+    "latest_stage": {
+      "name": "deploy",
+      "started_on": null,
+      "ended_on": "2026-07-23T08:54:03.571432Z",
+      "status": "success"
+    },
+    "deployment_trigger": {
+      "type": "ad_hoc",
+      "metadata": {
+        "branch": "master",
+        "commit_hash": "c84a0d39cc07d2180ba9e4e5b5d18873689c734b",
+        "commit_message": "fix: 修 Stripe Edge 构建失败 + 新增 Google OAuth 登录(纯 Edge/jose)\r\n\r\n- 4 个 Stripe 路由改为不引入 Node SDK 的 stub，消除 Edge 编译报错\r\n- lib/stripe.ts 改为懒加载，保留真实实现供后续 Next15 复用\r\n- 新增 Google OAuth 登录：/api/auth/google(发起) /callback(换token+JWKS验签) /session /logout\r\n- lib/auth.ts 纯 Web Crypto + fetch \n\n[commit_message truncated]",
+        "commit_dirty": true
+      }
+    },
+    "stages": [
+      {
+        "name": "queued",
+        "started_on": "2026-07-23T08:54:01.501456Z",
+        "ended_on": null,
+        "status": "active"
+      },
+      {
+        "name": "initialize",
+        "started_on": null,
+        "ended_on": null,
+        "status": "idle"
+      },
+      {
+        "name": "clone_repo",
+        "started_on": null,
+        "ended_on": null,
+        "status": "idle"
+      },
+      {
+        "name": "build",
+        "started_on": null,
+        "ended_on": null,
+        "status": "idle"
+      },
+      {
+        "name": "deploy",
+        "started_on": null,
+        "ended_on": "2026-07-23T08:54:03.571432Z",
+        "status": "success"
+      }
+    ],
+    "build_config": {
+      "build_command": "npm run pages:build",
+      "destination_dir": ".vercel\\output",
+      "build_caching": null,
+      "root_dir": "/",
+      "web_analytics_tag": null,
+      "web_analytics_token": null
+    },
+    "source": {
+      "type": "github",
+      "config": {
+        "owner": "Ivy1008-star",
+        "repo_name": "notecleaner",
+        "production_branch": "master",
+        "pr_comments_enabled": false
+      }
+    },
+    "env_vars": {
+      "DEEPSEEK_API_KEY": {
+        "type": "secret_text",
+        "value": ""
+      }
+    },
+    "compatibility_date": "2024-09-23",
+    "compatibility_flags": [
+      "nodejs_compat"
+    ],
+    "build_image_major_version": 3,
+    "usage_model": "bundled",
+    "aliases": null,
+    "is_skipped": false,
+    "production_branch": "master",
+    "files": {
+      "/404.html": "720ccdc4c064607967636f949f920232",
+      "/404.rsc.json": "ec47da64e7da6749028b38bc647d8a22",
+      "/500.html": "b4c9fb470d703d38f14eb443366e684c",
+      "/__next-on-pages-dist__/cache/adaptor.js": "d627e7328cbf693dbcedcf18ba4941d1",
+      "/__next-on-pages-dist__/cache/cache-api.js": "39c53e3d21538493f6b97b7e4a029ba5",
+      "/__next-on-pages-dist__/cache/kv.js": "1004a9ae7f83bc800aa79a6d57372737",
+      "/__next-on-pages-dist__/functions/api/auth/google.func.js": "71a48078bb5a432998125cc11116e428",
+      "/__next-on-pages-dist__/functions/api/auth/google/callback.func.js": "708e25b9f782d51ec3f468389c72612a",
+      "/__next-on-pages-dist__/functions/api/auth/logout.func.js": "0fa103dc9edf605eaddcf8be703fa070",
+      "/__next-on-pages-dist__/functions/api/auth/session.func.js": "76f36132a8cb499bd00de5ff5ccdab4e",
+      "/__next-on-pages-dist__/functions/api/checkout.func.js": "d78496c177c99a497c22ebd4b1eb137d",
+      "/__next-on-pages-dist__/functions/api/humanize.func.js": "55fcb23a3db7ea255fb2af1416851148",
+      "/__next-on-pages-dist__/functions/api/subscription.func.js": "a559411f67e4cc53c56e01f26691bed0",
+      "/__next-on-pages-dist__/functions/api/verify.func.js": "5147d9a17ddaa2eef4e19318ed26a147",
+      "/__next-on-pages-dist__/functions/api/webhook/stripe.func.js": "49c84e9fed2f71221838db0d61e91d34",
+      "/__next-on-pages-dist__/manifest/537259e2ed205f5a7994cb4f05664668.js": "bdeb381330744d034caa1d0cd68b5773",
+      "/__next-on-pages-dist__/webpack/cdae1b7bc180f95426e711aeaceb5907.js": "ebdc191f7c982bb10c8fea23dd3cb734",
+      "/_app.rsc.json": "ec47da64e7da6749028b38bc647d8a22",
+      "/_document.rsc.json": "ec47da64e7da6749028b38bc647d8a22",
+      "/_error.rsc.json": "ec47da64e7da6749028b38bc647d8a22",
+      "/_next/static/chunks/117-c3c62c72e7475368.js": "375899e2bde57a8cfd44b8b1e52bed42",
+      "/_next/static/chunks/267.2138a4eb63ba5824.js": "d942183e3b51dc49f47fea4d863a64dc",
+      "/_next/static/chunks/7a49ec60.267a882800469226.js": "4b40e39866ae5f4ee7fde3dfa852f6f3",
+      "/_next/static/chunks/965-0062eec4e80453d8.js": "b9c4eae7d4f4acfb7611240e252079ae",
+      "/_next/static/chunks/app/_not-found/page-b62982a1b0a6c401.js": "873da5fc259c51f7d2abcf0323b4fe04",
+      "/_next/static/chunks/app/app/page-beb2068f3936b789.js": "764e382866afefa03c4875f01056ac19",
+      "/_next/static/chunks/app/layout-1fe3776bb01f508c.js": "87c87c15a834951afad339816213a9b0",
+      "/_next/static/chunks/app/page-c54bba8094f446a0.js": "ae7d0563161c1c47599c340cc8b3f807",
+      "/_next/static/chunks/fd9d1056-87da80e0c187477b.js": "dcc0c68e0f4a0e9a870c91ee2b2ff878",
+      "/_next/static/chunks/framework-f66176bb897dc684.js": "aeaf764bc615b0777ac1954b15811ef5",
+      "/_next/static/chunks/main-2a145fea6b760822.js": "2f476d9932a3def64dc83155239d9212",
+      "/_next/static/chunks/main-app-7e841f1d0681c816.js": "c14311abd441f67a1c226d2e09092cbe",
+      "/_next/static/chunks/pages/_app-72b849fbd24ac258.js": "4293fccd2eecd760d35d6da78c40bd4c",
+      "/_next/static/chunks/pages/_error-7ba65e1336b92748.js": "c180c999f8dcf35a99b8df2448025183",
+      "/_next/static/chunks/polyfills-42372ed130431b0a.js": "ffcb815f2cb3d53f8f0cd145af8e6864",
+      "/_next/static/chunks/webpack-40814cc98d79ab1c.js": "2d18a0427fe3416394d6ea615bf4e31e",
+      "/_next/static/css/f20a1217424886fc.css": "5f3bbe0b4b18cb67236942989f8e6dee",
+      "/_next/static/not-found.txt": "0b084b50ba6954e5765301aeda3f128c",
+      "/_next/static/uP1I49ujgvvXCEoY4UCYe/_buildManifest.js": "02e6dd5a92361d9b28f26f7e8fefc516",
+      "/_next/static/uP1I49ujgvvXCEoY4UCYe/_ssgManifest.js": "68ec281559dc5d89e3a92fa01e9919f4",
+      "/app.html": "23f683501f679b6b950b54976b8516bf",
+      "/app.rsc": "0b263df6d536b529cf7ee514fedffa3c",
+      "/cdn-cgi/errors/no-nodejs_compat.html": "40430b694546165fa9969afe6a0da543",
+      "/index.html": "b72f22e65bcb1b285b60034105bfc6b8",
+      "/index.rsc": "78d6b869b0a9f5737717e24fe4892f4c",
+      "/og.png": "c5116b6ce44ae6f8abf245830c11e454"
+    },
+    "uses_functions": true
+  },
+  "success": true,
+  "errors": [],
+  "messages": []
+}

@@ -1,0 +1,259 @@
+{
+  "result": {
+    "id": "a798fc28-3a2c-4008-bdbc-d7cc09826149",
+    "name": "notecleaner",
+    "subdomain": "notecleaner.pages.dev",
+    "domains": [
+      "notecleaner.pages.dev"
+    ],
+    "source": {
+      "type": "github",
+      "config": {
+        "owner": "Ivy1008-star",
+        "owner_id": "299787694",
+        "repo_name": "notecleaner",
+        "repo_id": "1307397845",
+        "production_branch": "master",
+        "pr_comments_enabled": true,
+        "deployments_enabled": true,
+        "production_deployments_enabled": true,
+        "preview_deployment_setting": "all",
+        "preview_branch_includes": [
+          "*"
+        ],
+        "preview_branch_excludes": [],
+        "path_includes": [
+          "*"
+        ],
+        "path_excludes": []
+      }
+    },
+    "build_config": {
+      "build_command": "npm run pages:build",
+      "destination_dir": ".vercel/output/static",
+      "root_dir": "/",
+      "web_analytics_tag": null,
+      "web_analytics_token": null
+    },
+    "deployment_configs": {
+      "preview": {
+        "env_vars": null,
+        "fail_open": true,
+        "always_use_latest_compatibility_date": false,
+        "compatibility_date": "2026-07-23",
+        "compatibility_flags": [],
+        "build_image_major_version": 3,
+        "usage_model": "standard"
+      },
+      "production": {
+        "env_vars": {
+          "DEEPSEEK_API_KEY": {
+            "type": "secret_text",
+            "value": ""
+          }
+        },
+        "fail_open": true,
+        "always_use_latest_compatibility_date": false,
+        "compatibility_date": "2024-09-23",
+        "compatibility_flags": [
+          "nodejs_compat"
+        ],
+        "build_image_major_version": 3,
+        "usage_model": "standard",
+        "wrangler_config_hash": "caec22a50f16b8063d443fc56903ce8338fedf02e8661f2cdd04c9accf854334"
+      }
+    },
+    "latest_deployment": {
+      "id": "cba0b13c-fe59-4e62-8219-681261e87018",
+      "short_id": "cba0b13c",
+      "project_id": "a798fc28-3a2c-4008-bdbc-d7cc09826149",
+      "project_name": "notecleaner",
+      "environment": "production",
+      "url": "https://cba0b13c.notecleaner.pages.dev",
+      "created_on": "2026-07-23T09:21:12.215346Z",
+      "modified_on": "2026-07-23T09:22:31.062187Z",
+      "latest_stage": {
+        "name": "deploy",
+        "started_on": "2026-07-23T09:22:25.228172Z",
+        "ended_on": "2026-07-23T09:22:31.062187Z",
+        "status": "success"
+      },
+      "deployment_trigger": {
+        "type": "github:push",
+        "metadata": {
+          "branch": "master",
+          "commit_hash": "943120289de2047017c391e01d1f552418595a45",
+          "commit_message": "docs: 修正 Cloudflare 构建输出目录为 .vercel/output/static (next-on-pages 官方要求) + jose 转运行时依赖",
+          "commit_dirty": false
+        }
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-07-23T09:21:12.602197Z",
+          "ended_on": "2026-07-23T09:21:12.604977Z",
+          "status": "success"
+        },
+        {
+          "name": "initialize",
+          "started_on": "2026-07-23T09:21:12.604977Z",
+          "ended_on": "2026-07-23T09:21:15.28115Z",
+          "status": "success"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": "2026-07-23T09:21:15.28115Z",
+          "ended_on": "2026-07-23T09:21:16.437373Z",
+          "status": "success"
+        },
+        {
+          "name": "build",
+          "started_on": "2026-07-23T09:21:16.437373Z",
+          "ended_on": "2026-07-23T09:22:25.228172Z",
+          "status": "success"
+        },
+        {
+          "name": "deploy",
+          "started_on": "2026-07-23T09:22:25.228172Z",
+          "ended_on": "2026-07-23T09:22:31.062187Z",
+          "status": "success"
+        }
+      ],
+      "build_config": {
+        "build_command": "npm run pages:build",
+        "destination_dir": ".vercel/output/static",
+        "build_caching": null,
+        "root_dir": "/",
+        "web_analytics_tag": null,
+        "web_analytics_token": null
+      },
+      "source": {
+        "type": "github",
+        "config": {
+          "owner": "Ivy1008-star",
+          "repo_name": "notecleaner",
+          "production_branch": "master",
+          "pr_comments_enabled": false
+        }
+      },
+      "env_vars": {
+        "DEEPSEEK_API_KEY": {
+          "type": "secret_text",
+          "value": ""
+        }
+      },
+      "compatibility_date": "2024-09-23",
+      "compatibility_flags": [
+        "nodejs_compat"
+      ],
+      "build_image_major_version": 3,
+      "usage_model": null,
+      "aliases": null,
+      "is_skipped": false,
+      "production_branch": "master",
+      "uses_functions": false,
+      "framework": "next"
+    },
+    "canonical_deployment": {
+      "id": "cba0b13c-fe59-4e62-8219-681261e87018",
+      "short_id": "cba0b13c",
+      "project_id": "a798fc28-3a2c-4008-bdbc-d7cc09826149",
+      "project_name": "notecleaner",
+      "environment": "production",
+      "url": "https://cba0b13c.notecleaner.pages.dev",
+      "created_on": "2026-07-23T09:21:12.215346Z",
+      "modified_on": "2026-07-23T09:22:31.062187Z",
+      "latest_stage": {
+        "name": "deploy",
+        "started_on": "2026-07-23T09:22:25.228172Z",
+        "ended_on": "2026-07-23T09:22:31.062187Z",
+        "status": "success"
+      },
+      "deployment_trigger": {
+        "type": "github:push",
+        "metadata": {
+          "branch": "master",
+          "commit_hash": "943120289de2047017c391e01d1f552418595a45",
+          "commit_message": "docs: 修正 Cloudflare 构建输出目录为 .vercel/output/static (next-on-pages 官方要求) + jose 转运行时依赖",
+          "commit_dirty": false
+        }
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-07-23T09:21:12.602197Z",
+          "ended_on": "2026-07-23T09:21:12.604977Z",
+          "status": "success"
+        },
+        {
+          "name": "initialize",
+          "started_on": "2026-07-23T09:21:12.604977Z",
+          "ended_on": "2026-07-23T09:21:15.28115Z",
+          "status": "success"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": "2026-07-23T09:21:15.28115Z",
+          "ended_on": "2026-07-23T09:21:16.437373Z",
+          "status": "success"
+        },
+        {
+          "name": "build",
+          "started_on": "2026-07-23T09:21:16.437373Z",
+          "ended_on": "2026-07-23T09:22:25.228172Z",
+          "status": "success"
+        },
+        {
+          "name": "deploy",
+          "started_on": "2026-07-23T09:22:25.228172Z",
+          "ended_on": "2026-07-23T09:22:31.062187Z",
+          "status": "success"
+        }
+      ],
+      "build_config": {
+        "build_command": "npm run pages:build",
+        "destination_dir": ".vercel/output/static",
+        "build_caching": null,
+        "root_dir": "/",
+        "web_analytics_tag": null,
+        "web_analytics_token": null
+      },
+      "source": {
+        "type": "github",
+        "config": {
+          "owner": "Ivy1008-star",
+          "repo_name": "notecleaner",
+          "production_branch": "master",
+          "pr_comments_enabled": false
+        }
+      },
+      "env_vars": {
+        "DEEPSEEK_API_KEY": {
+          "type": "secret_text",
+          "value": ""
+        }
+      },
+      "compatibility_date": "2024-09-23",
+      "compatibility_flags": [
+        "nodejs_compat"
+      ],
+      "build_image_major_version": 3,
+      "usage_model": null,
+      "aliases": null,
+      "is_skipped": false,
+      "production_branch": "master",
+      "uses_functions": false,
+      "framework": "next"
+    },
+    "created_on": "2026-07-23T05:59:32.476676Z",
+    "production_branch": "master",
+    "production_script_name": "pages-worker--16709266-production",
+    "preview_script_name": "pages-worker--16709266-preview",
+    "uses_functions": false,
+    "framework": "next",
+    "framework_version": "14.2.32"
+  },
+  "success": true,
+  "errors": [],
+  "messages": []
+}
