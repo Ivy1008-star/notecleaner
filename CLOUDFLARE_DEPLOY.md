@@ -25,8 +25,9 @@
    - **Framework preset**：`Next.js`
    - **Build command**：`npm run pages:build`
      - ⚠️ **必须用 `npm run pages:build`，不要用裸 `npx @cloudflare/next-on-pages`**。本仓库的 `pages:build` 已封装为 `next build && npx @cloudflare/next-on-pages`。next-on-pages 适配器本身**不会**跑 `next build`，如果只跑适配器、Cloudflare 全新 clone 又没有缓存的 `.next`，就不会生成 `_worker.js`，导致线上 `uses_functions: false`、所有路由 404。链式 `next build` 是保证 worker 一定被产出的关键。
-   - **Output directory**：`.vercel/output/static` ⚠️ **必须是 `static` 子目录，不能是 `.vercel/output`**
-     - 原因：next-on-pages 把静态资源和 `_worker.js` 都放进 `.vercel/output/static/`。Cloudflare 只有把输出目录指到 `static/`，才会把 `index.html`/`_next/` 提到站点根、并把 `static/_worker.js` 当成 Functions Worker 跑起来。指到 `.vercel/output`（父目录）会导致所有路由 404（`uses_functions: false`）。
+   - **Output directory**：`.vercel/output` ⚠️ **必须是 `.vercel/output`（Vercel Build Output 格式父目录），不是 `.vercel/output/static`**
+     - 原因（实测结论，和网上 README 相反）：本项目在 Cloudflare 上，把输出目录指到 `.vercel/output/static` 时，部署详情 `uses_functions` 一直是 `false`、所有路由 404。改成 `.vercel/output`（父目录，含 `config.json` v3 的 Vercel 格式）后，Cloudflare 会自动转换并把 `static/_worker.js` 当成 Functions Worker 启用（`uses_functions: true`）。`25cc93ad`/`736ca89e` 两次成功部署验证过。
+     - 配合上面的 Build command = `npm run pages:build`（`next build && npx @cloudflare/next-on-pages`），保证 worker 一定被产出。
    - **Production branch**：`master`
 3. **Node 版本**（重要）：构建环境默认 Node 可能偏低，Next 14.2 需要 `>=18.17`。在构建设置里的 **Environment variables（构建时）** 加：
    - `NODE_VERSION` = `20`
@@ -85,7 +86,10 @@ npm run deploy:cf        # wrangler pages deploy
 - 线上 Humanize 报错 "missing DEEPSEEK_API_KEY" → 环境变量没加或没重新部署。
 - API 路由（/api/*）报错 → 确认 `wrangler.toml` 有 `compatibility_flags = ["nodejs_compat"]`（本仓库已加）。
 - 付费后仍 Free → 检查 `STRIPE_PRICE_PRO/ULTRA` 与 Stripe 后台 Price ID 完全一致。
-- **线上所有路由 404 / 部署详情 `uses_functions: false`** → 这是最隐蔽的坑：build command 只跑了 `npx @cloudflare/next-on-pages` 没先 `next build`，Cloudflare 全新构建没有 `.next` 可转换，于是没有 `_worker.js`。修法：build command 改成 `npm run pages:build`（已含 `next build &&`）。改完重新部署，部署详情里 `uses_functions` 应变 `true`，`/` 和 `/api/*` 才会活。
+- **线上所有路由 404 / 部署详情 `uses_functions: false`** → 两个独立原因叠加，都修好才活：
+  1. **Build command 只跑了 `npx @cloudflare/next-on-pages` 没先 `next build`** → Cloudflare 全新构建没有 `.next` 可转换，不生成 `_worker.js`。修法：build command 改成 `npm run pages:build`（已含 `next build &&`）。
+  2. **Output directory 配成了 `.vercel/output/static`** → 本账号实测这个路径 `uses_functions` 永远 `false`。改回 `.vercel/output`（Vercel 格式父目录，Cloudflare 会自动转换并启用 `static/_worker.js`）。
+  - 两个条件都满足后重新部署，部署详情里 `uses_functions` 应变 `true`，`/` 和 `/api/*` 才会活。
 
 ---
 
