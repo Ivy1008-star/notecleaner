@@ -216,7 +216,7 @@ export default function HumanizeTool() {
   async function extractPdfText(file: File): Promise<string> {
     const pdfjs: any = await import('pdfjs-dist')
     pdfjs.GlobalWorkerOptions.workerSrc =
-      'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.mjs'
+      'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
     const buf = await file.arrayBuffer()
     const doc = await pdfjs.getDocument({ data: buf }).promise
     let out = ''
