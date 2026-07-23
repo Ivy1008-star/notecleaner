@@ -23,8 +23,9 @@
 1. 在仓库列表里搜 / 选 **`Ivy1008-star/notecleaner`** → 继续
 2. 构建设置（Cloudflare 选 **Next.js** 预设会自动填，确认一下）：
    - **Framework preset**：`Next.js`
-   - **Build command**：`npx @cloudflare/next-on-pages`
-   - **Output directory**：`.vercel/output` （next-on-pages 产物，勿手改）
+   - **Build command**：`npx @cloudflare/next-on-pages` （本仓库已封装为 `npm run pages:build`，两者等价）
+   - **Output directory**：`.vercel/output/static` ⚠️ **必须是 `static` 子目录，不能是 `.vercel/output`**
+     - 原因：next-on-pages 把静态资源和 `_worker.js` 都放进 `.vercel/output/static/`。Cloudflare 只有把输出目录指到 `static/`，才会把 `index.html`/`_next/` 提到站点根、并把 `static/_worker.js` 当成 Functions Worker 跑起来。指到 `.vercel/output`（父目录）会导致所有路由 404（`uses_functions: false`）。
    - **Production branch**：`master`
 3. **Node 版本**（重要）：构建环境默认 Node 可能偏低，Next 14.2 需要 `>=18.17`。在构建设置里的 **Environment variables（构建时）** 加：
    - `NODE_VERSION` = `20`
