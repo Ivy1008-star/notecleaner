@@ -8,7 +8,7 @@ export function getStripe(): Stripe {
   if (!key) throw new Error('Missing STRIPE_SECRET_KEY')
   if (!cached) {
     cached = new Stripe(key, {
-      apiVersion: '2024-06-20',
+      apiVersion: '2024-06-20' as any,
       typescript: true,
     })
   }
