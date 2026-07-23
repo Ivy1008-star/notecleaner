@@ -24,7 +24,10 @@
 2. 构建设置（Cloudflare 选 **Next.js** 预设会自动填，确认一下）：
    - **Framework preset**：`Next.js`
    - **Build command**：`npm run pages:build`
-     - ⚠️ **必须用 `npm run pages:build`，不要用裸 `npx @cloudflare/next-on-pages`**。本仓库的 `pages:build` 已封装为 `next build && npx @cloudflare/next-on-pages`。next-on-pages 适配器本身**不会**跑 `next build`，如果只跑适配器、Cloudflare 全新 clone 又没有缓存的 `.next`，就不会生成 `_worker.js`，导致线上 `uses_functions: false`、所有路由 404。链式 `next build` 是保证 worker 一定被产出的关键。
+     - ⚠️ **必须用 `npm run pages:build`，不要用裸 `npx @cloudflare/next-on-pages`**。本仓库的 `pages:build` = `next build && npx @cloudflare/next-on-pages && node scripts/flatten-output.mjs`。三步缺一不可：
+       1. `next build`：适配器本身不跑 next build，Cloudflare 全新 clone 没有缓存的 `.next` 就转换不出 worker。
+       2. `npx @cloudflare/next-on-pages`：产出 Vercel 格式输出（worker 被埋在 `.vercel/output/static/_worker.js`）。
+       3. `node scripts/flatten-output.mjs`：**关键补丁**。把 `static/` 里的 `_worker.js` + `__next-on-pages-dist__/functions/` 提到 `.vercel/output` 根目录，并删掉 `config.json`/`builds.json` 这两个 Vercel 格式标记。否则 Cloudflare Git 构建不会自动转换嵌套结构，`uses_functions` 一直是 `false`、全线 404。
    - **Output directory**：`.vercel/output` ⚠️ **必须是 `.vercel/output`（Vercel Build Output 格式父目录），不是 `.vercel/output/static`**
      - 原因（实测结论，和网上 README 相反）：本项目在 Cloudflare 上，把输出目录指到 `.vercel/output/static` 时，部署详情 `uses_functions` 一直是 `false`、所有路由 404。改成 `.vercel/output`（父目录，含 `config.json` v3 的 Vercel 格式）后，Cloudflare 会自动转换并把 `static/_worker.js` 当成 Functions Worker 启用（`uses_functions: true`）。`25cc93ad`/`736ca89e` 两次成功部署验证过。
      - 配合上面的 Build command = `npm run pages:build`（`next build && npx @cloudflare/next-on-pages`），保证 worker 一定被产出。
@@ -86,10 +89,7 @@ npm run deploy:cf        # wrangler pages deploy
 - 线上 Humanize 报错 "missing DEEPSEEK_API_KEY" → 环境变量没加或没重新部署。
 - API 路由（/api/*）报错 → 确认 `wrangler.toml` 有 `compatibility_flags = ["nodejs_compat"]`（本仓库已加）。
 - 付费后仍 Free → 检查 `STRIPE_PRICE_PRO/ULTRA` 与 Stripe 后台 Price ID 完全一致。
-- **线上所有路由 404 / 部署详情 `uses_functions: false`** → 两个独立原因叠加，都修好才活：
-  1. **Build command 只跑了 `npx @cloudflare/next-on-pages` 没先 `next build`** → Cloudflare 全新构建没有 `.next` 可转换，不生成 `_worker.js`。修法：build command 改成 `npm run pages:build`（已含 `next build &&`）。
-  2. **Output directory 配成了 `.vercel/output/static`** → 本账号实测这个路径 `uses_functions` 永远 `false`。改回 `.vercel/output`（Vercel 格式父目录，Cloudflare 会自动转换并启用 `static/_worker.js`）。
-  - 两个条件都满足后重新部署，部署详情里 `uses_functions` 应变 `true`，`/` 和 `/api/*` 才会活。
+- **线上所有路由 404 / 部署详情 `uses_functions: false`** → 根因是 Cloudflare Git 构建不自动转换 next-on-pages 1.x 的嵌套 Vercel 输出。`pages:build` 已用 `scripts/flatten-output.mjs` 把 worker 提到输出根目录修复。确认：部署详情 `uses_functions` 应为 `true`，且 `files` 里应有根级 `/_worker.js` 和 `/__next-on-pages-dist__/functions/...`（而不是嵌套在 `/static/_worker.js/...` 下）。若仍是 `false`，检查 flatten 脚本是否跑到了（build 日志里应有 `[flatten]` 行）。
 
 ---
 
