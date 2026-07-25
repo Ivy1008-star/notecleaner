@@ -6,5 +6,5 @@ compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "."
 
 # Workers + Assets 配置
-main = "worker.js"
+main = "index.js"
 assets = { directory = "static", binding = "ASSETS" }
