@@ -1,13 +1,16 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { PlanButton } from '../PricingActions'
+import { PlanPaymentButtons } from '../PricingActions'
 import { GoogleAuth } from '../GoogleAuth'
+import { humanize as humanizeLocal } from '../../lib/humanizer'
+import { diff, renderDiffToHTML } from '../../lib/diff'
 
 type TierId = 'free' | 'pro' | 'ultra'
 type ModeId = 'notes' | 'essay' | 'report' | 'email' | 'social'
 type StrengthId = 'polish' | 'light' | 'standard' | 'aggressive' | 'deep'
+type ViewMode = 'clean' | 'diff'
 
 const LIMITS: Record<TierId, number> = { free: 500, pro: 50000, ultra: 500000 }
 const LS_SUB = 'nc_sub'
@@ -31,6 +34,11 @@ const STRENGTHS: { id: StrengthId; label: string; pro: boolean }[] = [
   { id: 'standard', label: 'Standard', pro: false },
   { id: 'aggressive', label: 'Aggressive', pro: false },
   { id: 'deep', label: 'Deep', pro: true },
+]
+
+const VIEW_MODES: { id: ViewMode; label: string }[] = [
+  { id: 'clean', label: 'Clean' },
+  { id: 'diff', label: 'Diff' },
 ]
 
 function windowKey(tier: TierId): string {
@@ -100,13 +108,10 @@ function estimateAiScore(text: string): number {
   const sentences = t.split(/[.!?]+/).filter(Boolean)
   const avgLen = words / Math.max(1, sentences.length)
   const longWords = (t.match(/\b\w{12,}\b/g) || []).length
-  const connectives =
-    t.match(
-      /\b(however|therefore|moreover|furthermore|in conclusion|additionally|nevertheless|consequently|thus|hence|utilize|leverage|robust|comprehensive|in order to|it is important to note)\b/gi
-    ) || []
+  const connectives = (t.match(/\b(however|therefore|moreover|furthermore|in conclusion|additionally|nevertheless|consequently|thus|hence|utilize|leverage|robust|comprehensive|in order to|it is important to note)\b/gi) || []).length
   let score = 10
   score += Math.min(40, avgLen * 3)
-  score += Math.min(30, (connectives.length / Math.max(1, sentences.length)) * 25)
+  score += Math.min(30, (connectives / Math.max(1, sentences.length)) * 25)
   score += Math.min(20, (longWords / Math.max(1, words)) * 200)
   return Math.max(0, Math.min(100, Math.round(score)))
 }
@@ -138,6 +143,8 @@ export default function HumanizeTool() {
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(false)
   const [uploadName, setUploadName] = useState('')
+  const [viewMode, setViewMode] = useState<ViewMode>('clean')
+  const [useLocalMode, setUseLocalMode] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -239,6 +246,7 @@ export default function HumanizeTool() {
     setStrength(val)
   }
 
+  // API模式改写
   async function humanizeChunk(chunk: string): Promise<string> {
     const res = await fetch('/api/humanize', {
       method: 'POST',
@@ -247,7 +255,7 @@ export default function HumanizeTool() {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || 'Request failed')
-    return data.result as string
+    return data.output as string
   }
 
   async function handleSubmit() {
@@ -272,7 +280,22 @@ export default function HumanizeTool() {
     try {
       for (let i = 0; i < parts.length; i++) {
         const before = parts[i]
-        const after = await humanizeChunk(before)
+        let after: string
+        try {
+          if (useLocalMode) {
+            // 本地模式：使用规则重写引擎
+            after = humanizeLocal(before, { mode, strength })
+          } else {
+            // API模式：调用DeepSeek
+            after = await humanizeChunk(before)
+          }
+        } catch (e: any) {
+          // P1-1: API失败时自动回退到本地模式
+          console.log('API failed, falling back to local mode:', e.message)
+          after = humanizeLocal(before, { mode, strength })
+          setUseLocalMode(true)
+          setError('API temporarily unavailable - using local rewrite engine')
+        }
         results.push({
           before,
           after,
@@ -291,6 +314,7 @@ export default function HumanizeTool() {
   }
 
   const finalText = chunks.map((c) => c.after).join('\n\n')
+  const finalBefore = chunks.map((c) => c.before).join('\n\n')
 
   function copyResult() {
     if (finalText) navigator.clipboard.writeText(finalText)
@@ -340,6 +364,13 @@ export default function HumanizeTool() {
           Paste AI-generated text, pick a mode and strength, and get natural writing back.
         </p>
 
+        {/* 本地模式指示器 */}
+        {useLocalMode && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+            ⚡ Running in local rewrite mode. Your text never leaves your browser.
+          </div>
+        )}
+
         {/* 配额条 */}
         {tier === 'free' || !isUnlimited ? (
           <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -376,7 +407,7 @@ export default function HumanizeTool() {
               <li>✓ No daily word cap on Deep mode</li>
             </ul>
             <div className="mt-5 flex items-center gap-3">
-              <PlanButton tier="pro" label="Go Pro · $9/mo" />
+              <PlanPaymentButtons tier="pro" stripeLabel="Go Pro · $9/mo" />
               <button className="text-sm font-semibold text-brand underline" onClick={() => setShowProGate(false)}>
                 Maybe later
               </button>
@@ -397,56 +428,28 @@ export default function HumanizeTool() {
                 </div>
                 <p className="mt-1 text-sm text-slate-500">50,000 words / month</p>
                 <div className="mt-4">
-                  <PlanButton tier="pro" label="Choose Pro" />
+                  <PlanPaymentButtons tier="pro" stripeLabel="Choose Pro" />
                 </div>
               </div>
-              <div className="rounded-xl border-2 border-violet-400 bg-white p-5 text-center">
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-5 text-center">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700">Best value</span>
                 <h4 className="text-lg font-bold text-ink">Ultra</h4>
                 <div className="text-3xl font-extrabold text-ink">
                   $29<span className="text-sm font-medium text-slate-400">/mo</span>
                 </div>
-                <p className="mt-1 text-sm text-slate-500">500,000 words / month + team</p>
+                <p className="mt-1 text-sm text-slate-500">500,000 words / month</p>
                 <div className="mt-4">
-                  <PlanButton tier="ultra" label="Choose Ultra" variant="ghost" />
+                  <PlanPaymentButtons tier="ultra" stripeLabel="Choose Ultra" />
                 </div>
               </div>
             </div>
-            <button className="mt-4 text-sm font-semibold text-brand underline" onClick={() => setShowUpgrade(false)}>
-              Maybe later
-            </button>
+            <div className="mt-4 text-center">
+              <button className="text-sm font-semibold text-brand underline" onClick={() => setShowUpgrade(false)}>
+                Maybe later
+              </button>
+            </div>
           </div>
         )}
-
-        {/* 文件上传 + 拖拽（PRD 3.1） */}
-        <div
-          onDragOver={(e) => {
-            e.preventDefault()
-            setDragOver(true)
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault()
-            setDragOver(false)
-            handleFiles(e.dataTransfer.files)
-          }}
-          onClick={() => fileRef.current?.click()}
-          className={`mt-6 cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition ${
-            dragOver ? 'border-brand bg-blue-50' : 'border-slate-300 bg-slate-50 hover:border-brand'
-          }`}
-        >
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".txt,.md,.pdf"
-            className="hidden"
-            onChange={(e) => handleFiles(e.target.files)}
-          />
-          <p className="text-sm font-medium text-slate-600">
-            拖拽文件到此处，或点击上传
-          </p>
-          <p className="mt-1 text-xs text-slate-400">支持 .txt / .md / .pdf（长 PDF 自动切 Report 模式）</p>
-          {uploadName && <p className="mt-2 text-xs font-semibold text-brand">已载入：{uploadName}</p>}
-        </div>
 
         {/* 模式选择 */}
         <div className="mt-6">
@@ -490,13 +493,60 @@ export default function HumanizeTool() {
           </div>
         </div>
 
-        {/* 输入文本框 */}
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Paste your AI-generated text here..."
-          className="mt-4 w-full min-h-[224px] resize-y rounded-xl border-2 border-slate-200 p-4 text-base outline-none focus:border-brand"
-        />
+        {/* 输入文本框 - 支持拖拽 */}
+        <div
+          className={`mt-4 rounded-xl border-2 transition-all ${
+            dragOver ? 'border-brand bg-brand-soft/20' : 'border-slate-200'
+          }`}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragOver(false)
+            handleFiles(e.dataTransfer.files)
+          }}
+        >
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Paste your AI-generated text here, or drag and drop a file..."
+            className="w-full min-h-[224px] resize-y rounded-xl bg-transparent p-4 text-base outline-none"
+          />
+          {dragOver && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-brand-soft/80 text-brand-dark font-semibold">
+              📂 Drop your file here
+            </div>
+          )}
+        </div>
+
+        {/* 文件上传按钮 */}
+        <div className="mt-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".txt,.md,.pdf"
+              onChange={(e) => handleFiles(e.target.files)}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="text-sm font-medium text-brand hover:underline"
+            >
+              📁 Upload file
+            </button>
+            {uploadName && <span className="text-xs text-slate-400">Selected: {uploadName}</span>}
+          </div>
+          <label className="flex items-center gap-2 text-sm text-slate-500 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={useLocalMode}
+              onChange={(e) => setUseLocalMode(e.target.checked)}
+              className="rounded"
+            />
+            Local mode only (free)
+          </label>
+        </div>
 
         {/* Humanize 按钮 + 进度 */}
         <button
@@ -506,7 +556,7 @@ export default function HumanizeTool() {
             processing || !text.trim() ? 'cursor-not-allowed bg-slate-300' : 'bg-brand hover:bg-brand-dark'
           }`}
         >
-          {processing ? `Humanizing ${progress}%...` : 'Humanize Text'}
+          {processing ? `Humanizing ${progress}%...` : useLocalMode ? 'Humanize Text (Local)' : 'Humanize Text'}
         </button>
 
         {processing && (
@@ -531,9 +581,25 @@ export default function HumanizeTool() {
         {/* 结果区 */}
         {chunks.length > 0 && (
           <div className="mt-8">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <h3 className="text-lg font-bold text-ink">Result</h3>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                {/* P0-4: Clean/Diff视图切换 */}
+                <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                  {VIEW_MODES.map((vm) => (
+                    <button
+                      key={vm.id}
+                      onClick={() => setViewMode(vm.id)}
+                      className={`px-3 py-1.5 text-sm font-semibold transition ${
+                        viewMode === vm.id
+                          ? 'bg-brand text-white'
+                          : 'bg-white text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {vm.label}
+                    </button>
+                  ))}
+                </div>
                 <button
                   onClick={copyResult}
                   className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200"
@@ -549,26 +615,50 @@ export default function HumanizeTool() {
               </div>
             </div>
 
-            {chunks.map((c, i) => (
-              <div key={i} className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-400">
-                    Chunk {i + 1}/{chunks.length}
-                  </span>
+            {/* 分块结果显示 */}
+            {viewMode === 'clean' ? (
+              // Clean视图：显示纯文本结果
+              chunks.map((c, i) => (
+                <div key={i} className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400">
+                      Chunk {i + 1}/{chunks.length}
+                    </span>
+                    <span className="flex items-center gap-1 text-xs">
+                      <span className={`rounded px-2 py-0.5 font-semibold ${badgeClass(classifyMini(c.scoreBefore))}`}>
+                        {classifyMini(c.scoreBefore)} {c.scoreBefore}%
+                      </span>
+                      <span className="text-slate-300">→</span>
+                      <span className={`rounded px-2 py-0.5 font-semibold ${badgeClass(classifyMini(c.scoreAfter))}`}>
+                        {classifyMini(c.scoreAfter)} {c.scoreAfter}%
+                      </span>
+                    </span>
+                  </div>
+                  <p className="mb-2 whitespace-pre-wrap text-sm text-slate-400 line-clamp-2">{c.before}</p>
+                  <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-slate-700">{c.after}</p>
+                </div>
+              ))
+            ) : (
+              // Diff视图：显示差异对比
+              <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400">Full Diff View</span>
                   <span className="flex items-center gap-1 text-xs">
-                    <span className={`rounded px-2 py-0.5 font-semibold ${badgeClass(classifyMini(c.scoreBefore))}`}>
-                      {classifyMini(c.scoreBefore)} {c.scoreBefore}%
+                    <span className={`rounded px-2 py-0.5 font-semibold ${badgeClass(classifyMini(estimateAiScore(finalBefore)))}`}>
+                      {classifyMini(estimateAiScore(finalBefore))} {estimateAiScore(finalBefore)}%
                     </span>
                     <span className="text-slate-300">→</span>
-                    <span className={`rounded px-2 py-0.5 font-semibold ${badgeClass(classifyMini(c.scoreAfter))}`}>
-                      {classifyMini(c.scoreAfter)} {c.scoreAfter}%
+                    <span className={`rounded px-2 py-0.5 font-semibold ${badgeClass(classifyMini(estimateAiScore(finalText)))}`}>
+                      {classifyMini(estimateAiScore(finalText))} {estimateAiScore(finalText)}%
                     </span>
                   </span>
                 </div>
-                <p className="mb-2 whitespace-pre-wrap text-sm text-slate-400 line-clamp-2">{c.before}</p>
-                <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-slate-700">{c.after}</p>
+                <div
+                  className="whitespace-pre-wrap text-[15px] leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: renderDiffToHTML(diff(finalBefore, finalText)) }}
+                />
               </div>
-            ))}
+            )}
 
             <p className="mt-4 text-center text-[13px] text-slate-400">
               {tier === 'free'

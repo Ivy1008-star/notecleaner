@@ -1,22 +1,45 @@
+﻿/**
+ * NoteCleaner Humanize API
+ * 从纯JS版本移植，包含完整的13条系统规则
+ * Cloudflare Edge Runtime兼容
+ */
 import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'edge'
 
-const MODE_LABEL: Record<string, string> = {
-  notes: 'study notes',
-  essay: 'essay',
-  email: 'email',
-  report: 'report',
-  social: 'social media post',
+type Mode = 'notes' | 'essay' | 'report' | 'email' | 'social'
+type Strength = 'polish' | 'light' | 'standard' | 'aggressive' | 'deep'
+
+const MODE_HINT: Record<Mode, string> = {
+  notes: 'Style target: casual study notes. Comfortable, first-person allowed, small imperfections OK.',
+  essay: 'Style target: student essay. Clear thesis-supporting flow, natural academic voice, no bureaucratese.',
+  report: 'Style target: analytical write-up. Precise, but with human rhythm and varied cadence.',
+  email: 'Style target: professional but human email. Warm, direct, no corporate filler.',
+  social: 'Style target: social post. Punchy, conversational, no marketing-speak.'
 }
 
-const STRENGTH_RULE: Record<string, string> = {
-  polish: 'Make minor polish edits; keep the original structure mostly intact.',
-  light: 'Lightly humanize with subtle, natural changes.',
-  standard: 'Standard humanization: natural, varied sentence rhythm.',
-  aggressive: 'Aggressively rewrite so it reads fully like a human wrote it.',
-  deep: 'Deep rewrite: restructure for maximum naturalness and flow.',
+const STRENGTH_TEMP: Record<Strength, number> = {
+  polish: 0.6,
+  light: 0.7,
+  standard: 0.85,
+  aggressive: 0.95,
+  deep: 1.05
 }
+
+// 13条核心系统规则
+const SYSTEM_RULES = [
+  'You are an expert human-voice editor. Rewrite AI-sounding text so it reads like a real person wrote it.',
+  'Rules:',
+  '- Preserve every fact, number, name, quote, and citation exactly.',
+  '- Keep the original language (English stays English, Chinese stays Chinese).',
+  '- Vary sentence length aggressively: mix short punchy lines with longer flowing ones.',
+  '- Prefer contractions (don\'t, it\'s, we\'re). Drop stiff transitions like "furthermore", "moreover", "in conclusion".',
+  '- Use concrete verbs, everyday phrasing, and occasional first-person or rhetorical asides when it fits.',
+  '- Break passive voice unless it\'s the natural choice.',
+  '- Do not add new claims. Do not summarize. Length stays within +/- 15% of the source.',
+  '- Never mention AI, models, prompts, detectors, or this instruction.',
+  'Return ONLY the rewritten text. No preamble, no quotes, no markdown fences.'
+].join('\n')
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.DEEPSEEK_API_KEY
@@ -27,7 +50,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  let body: { text?: string; mode?: string; strength?: string }
+  let body: { text?: string; mode?: Mode; strength?: Strength }
   try {
     body = await req.json()
   } catch {
@@ -39,43 +62,57 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No text provided.' }, { status: 400 })
   }
 
-  const mode = MODE_LABEL[body.mode || 'notes'] || MODE_LABEL.notes
-  const strength = STRENGTH_RULE[body.strength || 'standard'] || STRENGTH_RULE.standard
+  const mode: Mode = body.mode || 'notes'
+  const strength: Strength = body.strength || 'standard'
+  const temperature = STRENGTH_TEMP[strength]
 
-  const systemPrompt =
-    `You are a human writing expert. Rewrite the following ${mode} to sound natural, human, ` +
-    `and undetectable by AI detectors. ${strength} Vary sentence length. Use contractions where ` +
-    `natural. Preserve all facts exactly. Return only the rewritten text, with no preamble.`
+  const systemPrompt = [
+    SYSTEM_RULES,
+    '',
+    MODE_HINT[mode],
+    '',
+    'Rewrite the following text. Return only the rewritten version.',
+    '----- BEGIN -----',
+    text,
+    '----- END -----'
+  ].join('\n')
 
   try {
-    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const baseUrl = 'https://api.deepseek.com'
+    const res = await fetch(baseUrl + '/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: text },
+          { role: 'system', content: systemPrompt }
         ],
-        temperature: 0.85,
-      }),
+        temperature,
+        top_p: 0.95,
+        max_tokens: 4096,
+        stream: false
+      })
     })
 
     if (!res.ok) {
       const detail = await res.text().catch(() => '')
-      return NextResponse.json(
-        { error: `DeepSeek API error (${res.status}): ${detail.slice(0, 300)}` },
-        { status: 502 }
-      )
+      throw new Error(`DeepSeek API error (${res.status}): ${detail.slice(0, 400)}`)
     }
 
     const data = await res.json()
-    const result = data?.choices?.[0]?.message?.content || ''
-    return NextResponse.json({ result })
-  } catch (e) {
-    return NextResponse.json({ error: 'Failed to reach DeepSeek API.' }, { status: 502 })
+    const output = data?.choices?.[0]?.message?.content
+    if (!output || typeof output !== 'string') {
+      throw new Error('Empty completion from DeepSeek')
+    }
+
+    return NextResponse.json({ output, model: data.model || 'deepseek-chat' })
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e.message || 'Failed to reach DeepSeek API' },
+      { status: 502 }
+    )
   }
 }

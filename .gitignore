@@ -16,3 +16,10 @@ node_modules
 /_*.json
 /_root.html
 /_list.json
+
+# backup dirs & temp artifacts (not tracked)
+notecleaner-next-backups/
+package-lock.json_backup
+resp_*.txt
+.workbuddy/
+.wrangler/
