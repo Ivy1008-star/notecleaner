@@ -401,7 +401,31 @@ function classifyMini(sc: number): 'AI' | 'Mixed' | 'Human' {
               <li>✓ No daily word cap on Deep mode</li>
             </ul>
             <div className="mt-5 flex items-center gap-3">
-              <PlanPaymentButtons tier="pro" stripeLabel="Go Pro · $9/mo" />
+              <div className="grid grid-cols-2 gap-3 w-full">
+                <div className="rounded-xl border border-brand-soft bg-white p-4 text-center">
+                  <h4 className="text-lg font-bold text-ink">Pro</h4>
+                  <div className="text-2xl font-extrabold text-ink mt-1">
+                    $9<span className="text-sm font-medium text-slate-400">/mo</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">50,000 words / month</p>
+                  <div className="mt-3">
+                    <PlanPaymentButtons tier="pro" stripeLabel="Choose Pro" />
+                  </div>
+                </div>
+                <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-center">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700">Best value</span>
+                  <h4 className="text-lg font-bold text-ink">Ultra</h4>
+                  <div className="text-2xl font-extrabold text-ink mt-1">
+                    $29<span className="text-sm font-medium text-slate-400">/mo</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">500,000 words / month</p>
+                  <div className="mt-3">
+                    <PlanPaymentButtons tier="ultra" stripeLabel="Choose Ultra" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
               <button className="text-sm font-semibold text-brand underline" onClick={() => setShowProGate(false)}>
                 Maybe later
               </button>
