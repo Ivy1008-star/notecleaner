@@ -1,5 +1,5 @@
 name = "notecleaner"
-compatibility_date = "2025-07-25"
+compatibility_date = "2026-07-25"
 compatibility_flags = ["nodejs_compat"]
 
 # 输出目录指向项目根目录（flatten 步骤会把构建产物复制到根目录）
