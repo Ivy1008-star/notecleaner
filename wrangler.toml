@@ -2,8 +2,9 @@ name = "notecleaner"
 compatibility_date = "2025-07-25"
 compatibility_flags = ["nodejs_compat"]
 
-# Workers + Assets 统一平台配置
-# main 指向项目根目录 worker.js（由 flatten-output.mjs 复制）
-# assets 指向项目根目录 static/（由 flatten-output.mjs 复制）
+# 输出目录指向项目根目录（flatten 步骤会把构建产物复制到根目录）
+pages_build_output_dir = "."
+
+# Workers + Assets 配置
 main = "worker.js"
 assets = { directory = "static", binding = "ASSETS" }
