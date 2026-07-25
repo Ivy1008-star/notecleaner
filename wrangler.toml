@@ -1,8 +1,9 @@
-﻿name = "notecleaner"
-compatibility_date = "2024-04-01"
+name = "notecleaner"
+compatibility_date = "2025-07-25"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".vercel/output"
 
-[env.production.vars]
-ENVIRONMENT = "production"
-NEXT_PUBLIC_PAYPAL_CLIENT_ID = "your-paypal-client-id-here"
+# Workers + Assets 统一平台配置
+# main 指向 next-on-pages 生成的 Worker 入口
+# assets 指向静态文件目录
+main = ".vercel/output/_worker.js/index.js"
+assets = { directory = ".vercel/output/static", binding = "ASSETS" }
