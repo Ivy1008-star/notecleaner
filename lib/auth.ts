@@ -41,33 +41,26 @@ export interface CookieOpts {
 }
 
 export function setCookie(
-  res: Response,
+  res: any,  // NextResponse (Edge 安全)
   name: string,
   value: string,
   opts: CookieOpts
 ) {
-  // NextResponse.cookies 在某些版本对 maxAge 字段名为 maxAge；直接走原生头最稳
-  const parts = [
-    `${name}=${encodeURIComponent(value)}`,
-    `Path=${opts.path}`,
-    `Max-Age=${opts.maxAge}`,
-    `HttpOnly`,
-    `SameSite=${opts.sameSite}`,
-  ]
-  if (opts.secure) parts.push('Secure')
-  res.headers.append('Set-Cookie', parts.join('; '))
+  // 使用 NextResponse.cookies.set() 确保 cookie 被正确设置
+  res.cookies.set(name, value, {
+    path: opts.path,
+    maxAge: opts.maxAge,
+    httpOnly: opts.httpOnly,
+    sameSite: opts.sameSite,
+    secure: opts.secure,
+  })
 }
 
-export function clearCookie(res: Response, name: string, secure: boolean) {
-  const parts = [
-    `${name}=`,
-    'Path=/',
-    'Max-Age=0',
-    'HttpOnly',
-    'SameSite=Lax',
-  ]
-  if (secure) parts.push('Secure')
-  res.headers.append('Set-Cookie', parts.join('; '))
+export function clearCookie(res: any, name: string, secure: boolean) {
+  res.cookies.delete(name, {
+    path: '/',
+    secure: secure,
+  })
 }
 
 // ---------- Google ID Token 校验（JWKS，Edge 安全） ----------

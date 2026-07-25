@@ -7,7 +7,7 @@ export const runtime = 'edge'
 // 把 state 与 PKCE verifier 存进 httpOnly cookie，回调时校验。
 export async function GET(req: NextRequest) {
   const clientId = process.env.GOOGLE_CLIENT_ID
-  if (!clientId) {
+  if (!clientId || clientId === '__FILL_ME__' || clientId === 'your_google_oauth_client_id') {
     return NextResponse.json(
       { error: 'Google OAuth not configured. Set GOOGLE_CLIENT_ID.' },
       { status: 500 }
@@ -17,7 +17,10 @@ export async function GET(req: NextRequest) {
   const state = randomToken(32)
   const verifier = randomToken(64)
   const challenge = await pkceChallenge(verifier)
-  const redirectUri = `${req.nextUrl.origin}/api/auth/google/callback`
+  // 使用请求的 Host 头而非 nextUrl.origin，避免 0.0.0.0 与 localhost 的 cookie 域名不匹配
+  const host = req.headers.get('host') || req.nextUrl.host
+  const protocol = req.nextUrl.protocol
+  const redirectUri = `${protocol}//${host}/api/auth/google/callback`
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -32,7 +35,7 @@ export async function GET(req: NextRequest) {
   })
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
 
-  const secure = req.nextUrl.protocol === 'https:'
+  const secure = protocol === 'https:'
   const res = NextResponse.redirect(authUrl)
   const opts = { httpOnly: true, secure, sameSite: 'lax' as const, path: '/', maxAge: 600 }
   setCookie(res, COOKIE_STATE, state, opts)
