@@ -1,9 +1,9 @@
 /**
  * NoteCleaner Cloudflare Workers + Assets 输出扁平化补丁
  * 
- * 把 .vercel/output/static/_worker.js 提到 .vercel/output 根目录，
- * 并把 _worker.js/index.js 复制到项目根目录作为 worker.js（单文件），
- * 同时复制 static/ 到项目根目录，适配 Workers + Assets 统一平台。
+ * 把 _worker.js/index.js 复制到项目根目录作为 _worker.js（单文件），
+ * 同时复制 static/ 到项目根目录。
+ * Workers 集成会自动检测根目录的 _worker.js 作为入口。
  */
 import fs from 'fs'
 import path from 'path'
@@ -36,20 +36,7 @@ function main() {
     log('_worker.js not found in static/, skipping')
   }
 
-  // 2. 把 static/__next-on-pages-dist__/functions/ 移到 output 根目录
-  const srcDist = path.join(staticDir, '__next-on-pages-dist__')
-  const dstDist = path.join(outputDir, '__next-on-pages-dist__')
-  if (fs.existsSync(srcDist)) {
-    if (fs.existsSync(dstDist)) {
-      fs.rmSync(dstDist, { recursive: true, force: true })
-    }
-    fs.renameSync(srcDist, dstDist)
-    log('moved __next-on-pages-dist__ to output root')
-  } else {
-    log('__next-on-pages-dist__ not found in static/, skipping')
-  }
-
-  // 3. 删除 Vercel 格式标记文件
+  // 2. 删除 Vercel 格式标记文件
   const configFile = path.join(outputDir, 'config.json')
   if (fs.existsSync(configFile)) {
     fs.rmSync(configFile)
@@ -62,15 +49,16 @@ function main() {
     log('removed builds.json')
   }
 
-  // 4. 复制 _worker.js/index.js 到项目根目录作为 worker.js（单文件，适配 Workers）
+  // 3. 复制 _worker.js/index.js 到项目根目录作为 _worker.js（单文件）
+  //    Workers 集成会自动检测根目录的 _worker.js 作为入口
   const workerEntry = path.join(dstWorker, 'index.js')
-  const workerAtRoot = path.join(root, 'worker.js')
+  const workerAtRoot = path.join(root, '_worker.js')
   if (fs.existsSync(workerEntry)) {
     fs.cpSync(workerEntry, workerAtRoot)
-    log('copied _worker.js/index.js -> worker.js at project root')
+    log('copied _worker.js/index.js -> _worker.js at project root')
   }
 
-  // 5. 复制静态文件到项目根目录
+  // 4. 复制静态文件到项目根目录
   const staticAtRoot = path.join(root, 'static')
   if (fs.existsSync(staticDir)) {
     copyDir(staticDir, staticAtRoot)
