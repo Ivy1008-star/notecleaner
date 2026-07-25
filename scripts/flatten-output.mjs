@@ -1,9 +1,9 @@
 /**
  * NoteCleaner Cloudflare Workers + Assets 输出扁平化补丁
  * 
- * 把 _worker.js/index.js 复制到项目根目录作为 _worker.js（单文件），
+ * 把 _worker.js/index.js 复制到项目根目录作为 worker.js（单文件），
  * 同时复制 static/ 到项目根目录。
- * Workers 集成会自动检测根目录的 _worker.js 作为入口。
+ * Workers 集成会自动检测根目录的 worker.js 作为入口。
  */
 import fs from 'fs'
 import path from 'path'
@@ -37,31 +37,29 @@ function main() {
   }
 
   // 2. 删除 Vercel 格式标记文件
-  const configFile = path.join(outputDir, 'config.json')
-  if (fs.existsSync(configFile)) {
-    fs.rmSync(configFile)
-    log('removed config.json')
+  for (const file of ['config.json', 'builds.json']) {
+    const fp = path.join(outputDir, file)
+    if (fs.existsSync(fp)) {
+      fs.rmSync(fp)
+      log(`removed ${file}`)
+    }
   }
 
-  const buildsFile = path.join(outputDir, 'builds.json')
-  if (fs.existsSync(buildsFile)) {
-    fs.rmSync(buildsFile)
-    log('removed builds.json')
-  }
-
-  // 3. 复制 _worker.js/index.js 到项目根目录作为 _worker.js（单文件）
-  //    Workers 集成会自动检测根目录的 _worker.js 作为入口
+  // 3. 复制 _worker.js/index.js 到项目根目录作为 worker.js
   const workerEntry = path.join(dstWorker, 'index.js')
-  const workerAtRoot = path.join(root, '_worker.js')
+  const workerAtRoot = path.join(root, 'worker.js')
   if (fs.existsSync(workerEntry)) {
     fs.cpSync(workerEntry, workerAtRoot)
-    log('copied _worker.js/index.js -> _worker.js at project root')
+    log('copied _worker.js/index.js -> worker.js at project root')
   }
 
   // 4. 复制静态文件到项目根目录
   const staticAtRoot = path.join(root, 'static')
   if (fs.existsSync(staticDir)) {
-    copyDir(staticDir, staticAtRoot)
+    if (fs.existsSync(staticAtRoot)) {
+      fs.rmSync(staticAtRoot, { recursive: true, force: true })
+    }
+    fs.cpSync(staticDir, staticAtRoot, { recursive: true })
     log('copied static/ to project root')
   }
 
