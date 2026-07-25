@@ -3,7 +3,7 @@ compatibility_date = "2025-07-25"
 compatibility_flags = ["nodejs_compat"]
 
 # Workers + Assets 统一平台配置
-# main 指向 next-on-pages 生成的 Worker 入口
-# assets 指向静态文件目录
-main = ".vercel/output/_worker.js/index.js"
-assets = { directory = ".vercel/output/static", binding = "ASSETS" }
+# main 指向项目根目录的 _worker.js（由 flatten-output.mjs 复制）
+# assets 指向项目根目录的静态文件目录
+main = "_worker.js/index.js"
+assets = { directory = "static", binding = "ASSETS" }

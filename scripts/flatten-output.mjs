@@ -1,9 +1,9 @@
 /**
- * NoteCleaner Cloudflare Pages 输出扁平化补丁
+ * NoteCleaner Cloudflare Workers + Assets 输出扁平化补丁
  * 
  * 把 .vercel/output/static/_worker.js 和 __next-on-pages-dist__/functions/
  * 提到 .vercel/output 根目录，并清理 Vercel 格式标记文件。
- * 修复 Cloudflare Git 构建时 uses_functions 始终为 false 的问题。
+ * 同时复制到项目根目录，适配 Workers + Assets 统一平台。
  */
 import fs from 'fs'
 import path from 'path'
@@ -15,6 +15,15 @@ const outputDir = path.join(root, '.vercel', 'output')
 const staticDir = path.join(outputDir, 'static')
 
 const log = (msg) => console.log(`[flatten] ${msg}`)
+
+function copyDir(src, dst) {
+  if (!fs.existsSync(src)) return false
+  if (fs.existsSync(dst)) {
+    fs.rmSync(dst, { recursive: true, force: true })
+  }
+  fs.cpSync(src, dst, { recursive: true })
+  return true
+}
 
 function main() {
   // 1. 把 static/_worker.js 移到 output 根目录
@@ -51,6 +60,20 @@ function main() {
   if (fs.existsSync(buildsFile)) {
     fs.rmSync(buildsFile)
     log('removed builds.json')
+  }
+
+  // 4. 复制 _worker.js 到项目根目录（适配 Workers + Assets 统一平台）
+  const workerAtRoot = path.join(root, '_worker.js')
+  if (fs.existsSync(dstWorker)) {
+    copyDir(dstWorker, workerAtRoot)
+    log('copied _worker.js to project root')
+  }
+
+  // 5. 复制静态文件到项目根目录
+  const staticAtRoot = path.join(root, 'static')
+  if (fs.existsSync(staticDir)) {
+    copyDir(staticDir, staticAtRoot)
+    log('copied static/ to project root')
   }
 
   log('flatten complete')
