@@ -23,7 +23,7 @@ export const PLANS: Record<TierId, Plan> = {
     wordsLimit: 500,
     period: 'day',
     features: [
-      '500 words / day',
+      '1500 words / day',
       'All 5 writing modes',
       'All 5 strength levels',
       'No credit card required',

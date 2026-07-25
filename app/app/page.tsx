@@ -55,10 +55,10 @@ function countWords(text: string): number {
 }
 
 function tierLabel(tier: TierId): string {
-  if (tier === 'ultra') return 'ULTRA · 500k/mo'
-  if (tier === 'pro') return 'PRO · 50k/mo'
-  return 'FREE · 500/day'
-}
+    if (tier === 'ultra') return 'ULTRA · 500K/mo'
+    if (tier === 'pro') return 'PRO · 50K/mo'
+    return 'FREE · 1500/day'
+  }
 
 // 分块：按空行切，目标 900、硬顶 1400（PRD 约定）
 function splitIntoChunks(text: string, target = 900, hard = 1400): string[] {

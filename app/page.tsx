@@ -226,7 +226,7 @@ export default function Home() {
               </div>
               <p className="plan-desc">Perfect for casual use and testing.</p>
               <ul className="plan-features">
-                <li>500 words / day</li>
+                <li>1500 words / day</li>
                 <li>All 5 writing modes</li>
                 <li>First 4 strength levels</li>
                 <li>Local rewrite engine</li>
