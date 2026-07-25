@@ -1,9 +1,9 @@
 /**
  * NoteCleaner Cloudflare Workers + Assets 输出扁平化补丁
  * 
- * 把 .vercel/output/static/_worker.js 和 __next-on-pages-dist__/functions/
- * 提到 .vercel/output 根目录，并清理 Vercel 格式标记文件。
- * 同时复制到项目根目录，适配 Workers + Assets 统一平台。
+ * 把 .vercel/output/static/_worker.js 提到 .vercel/output 根目录，
+ * 并把 _worker.js/index.js 复制到项目根目录作为 worker.js（单文件），
+ * 同时复制 static/ 到项目根目录，适配 Workers + Assets 统一平台。
  */
 import fs from 'fs'
 import path from 'path'
@@ -62,11 +62,12 @@ function main() {
     log('removed builds.json')
   }
 
-  // 4. 复制 _worker.js 到项目根目录（适配 Workers + Assets 统一平台）
-  const workerAtRoot = path.join(root, '_worker.js')
-  if (fs.existsSync(dstWorker)) {
-    copyDir(dstWorker, workerAtRoot)
-    log('copied _worker.js to project root')
+  // 4. 复制 _worker.js/index.js 到项目根目录作为 worker.js（单文件，适配 Workers）
+  const workerEntry = path.join(dstWorker, 'index.js')
+  const workerAtRoot = path.join(root, 'worker.js')
+  if (fs.existsSync(workerEntry)) {
+    fs.cpSync(workerEntry, workerAtRoot)
+    log('copied _worker.js/index.js -> worker.js at project root')
   }
 
   // 5. 复制静态文件到项目根目录
