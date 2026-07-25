@@ -1,11 +1,4 @@
 name = "notecleaner"
 compatibility_date = "2026-07-25"
 compatibility_flags = ["nodejs_compat"]
-
-# 输出目录指向项目根目录（flatten 步骤会把构建产物复制到根目录）
-pages_build_output_dir = "."
-
-# Workers + Assets 配置
-# 注意：ASSETS 是保留名称，不能用于 Pages 项目，所以用 STATIC_AT
-main = "index.js"
-assets = { directory = "static", binding = "STATIC_AT" }
+pages_build_output_dir = ".vercel/output"
