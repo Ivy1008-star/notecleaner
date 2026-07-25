@@ -4,11 +4,10 @@
  * Cloudflare Edge Runtime兼容
  */
 import { NextRequest, NextResponse } from 'next/server'
+import { humanize as localHumanize } from '../../../lib/humanizer'
+import type { Mode, Strength } from '../../../lib/humanizer'
 
 export const runtime = 'edge'
-
-type Mode = 'notes' | 'essay' | 'report' | 'email' | 'social'
-type Strength = 'polish' | 'light' | 'standard' | 'aggressive' | 'deep'
 
 const MODE_HINT: Record<Mode, string> = {
   notes: 'Style target: casual study notes. Comfortable, first-person allowed, small imperfections OK.',
@@ -42,14 +41,6 @@ const SYSTEM_RULES = [
 ].join('\n')
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.DEEPSEEK_API_KEY
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'Server is missing DEEPSEEK_API_KEY environment variable.' },
-      { status: 500 }
-    )
-  }
-
   let body: { text?: string; mode?: Mode; strength?: Strength }
   try {
     body = await req.json()
@@ -64,6 +55,15 @@ export async function POST(req: NextRequest) {
 
   const mode: Mode = body.mode || 'notes'
   const strength: Strength = body.strength || 'standard'
+
+  const apiKey = process.env.DEEPSEEK_API_KEY
+  if (!apiKey || apiKey === 'sk-your_deepseek_api_key_here') {
+    return NextResponse.json({
+      output: localHumanize(text, { mode, strength }),
+      model: 'local-rules'
+    })
+  }
+
   const temperature = STRENGTH_TEMP[strength]
 
   const systemPrompt = [
@@ -110,9 +110,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ output, model: data.model || 'deepseek-chat' })
   } catch (e: any) {
-    return NextResponse.json(
-      { error: e.message || 'Failed to reach DeepSeek API' },
-      { status: 502 }
-    )
+    // 网络不可达或 API 失败时回退到本地规则引擎
+    const output = localHumanize(text, { mode, strength })
+    return NextResponse.json({ output, model: 'local-rules' })
   }
 }

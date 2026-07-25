@@ -6,15 +6,15 @@ export default {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#2563eb',
-          dark: '#1d4ed8',
-          soft: '#eff6ff',
+          DEFAULT: '#6366f1',
+          dark: '#4f46e5',
+          soft: '#eef2ff',
         },
         ink: '#0f172a',
-        slate: '#475569',
+        slate: '#64748b',
       },
       borderRadius: {
-        xl2: '14px',
+        xl2: '12px',
       },
     },
   },

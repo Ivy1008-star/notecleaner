@@ -122,13 +122,7 @@ function classifyMini(sc: number): 'AI' | 'Mixed' | 'Human' {
   return 'Human'
 }
 
-function badgeClass(label: 'AI' | 'Mixed' | 'Human'): string {
-  if (label === 'AI') return 'bg-red-100 text-red-700'
-  if (label === 'Mixed') return 'bg-amber-100 text-amber-700'
-  return 'bg-green-100 text-green-700'
-}
-
-export default function HumanizeTool() {
+ export default function HumanizeTool() {
   const [text, setText] = useState('')
   const [mode, setMode] = useState<ModeId>('notes')
   const [strength, setStrength] = useState<StrengthId>('standard')
@@ -366,21 +360,21 @@ export default function HumanizeTool() {
 
         {/* 本地模式指示器 */}
         {useLocalMode && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+          <div className="local-mode-banner">
             ⚡ Running in local rewrite mode. Your text never leaves your browser.
           </div>
         )}
 
         {/* 配额条 */}
         {tier === 'free' || !isUnlimited ? (
-          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+          <div className="quota-bar">
+            <div className="quota-track">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-brand to-blue-400 transition-all duration-300"
+                className="quota-fill"
                 style={{ width: isUnlimited ? '100%' : `${usedPct}%` }}
               />
             </div>
-            <p className="mt-2 text-[13px] text-slate-500">
+            <p className="quota-text">
               {isUnlimited
                 ? 'Unlimited words · Pro/Ultra plan'
                 : `${remaining.toLocaleString()} words left${
@@ -453,20 +447,20 @@ export default function HumanizeTool() {
 
         {/* 模式选择 */}
         <div className="mt-6">
-          <label className="text-sm font-medium text-slate-600">Mode</label>
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <label className="tool-label">Mode</label>
+          <div className="mode-grid">
             {MODES.map((m) => (
               <button
                 key={m.id}
                 onClick={() => setMode(m.id)}
-                className={`rounded-lg border px-3 py-2 text-center transition ${
+                className={`mode-btn ${
                   mode === m.id
-                    ? 'border-brand bg-brand-soft text-brand-dark'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-brand'
+                    ? 'active'
+                    : ''
                 }`}
               >
-                <div className="text-sm font-semibold">{m.label}</div>
-                <div className="text-[11px] text-slate-400">{m.desc}</div>
+                <div className="mode-btn-label">{m.label}</div>
+                <div className="mode-btn-desc">{m.desc}</div>
               </button>
             ))}
           </div>
@@ -474,20 +468,19 @@ export default function HumanizeTool() {
 
         {/* 强度选择 */}
         <div className="mt-4">
-          <label className="text-sm font-medium text-slate-600">Strength</label>
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <label className="tool-label">Strength</label>
+          <div className="mode-grid">
             {STRENGTHS.map((s) => (
               <button
                 key={s.id}
                 onClick={() => onStrengthChange(s.id)}
-                className={`rounded-lg border px-3 py-2 text-center text-sm font-semibold transition ${
+                className={`mode-btn ${
                   strength === s.id
-                    ? 'border-brand bg-brand-soft text-brand-dark'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-brand'
+                    ? 'active'
+                    : ''
                 }`}
               >
-                {s.label}
-                {s.pro && <span className="ml-1 text-[10px] text-amber-600">PRO</span>}
+                <span className="mode-btn-label">{s.label}{s.pro && <span className="pro-tag">PRO</span>}</span>
               </button>
             ))}
           </div>
@@ -495,9 +488,7 @@ export default function HumanizeTool() {
 
         {/* 输入文本框 - 支持拖拽 */}
         <div
-          className={`mt-4 rounded-xl border-2 transition-all ${
-            dragOver ? 'border-brand bg-brand-soft/20' : 'border-slate-200'
-          }`}
+          className={`tool-textarea-wrap ${dragOver ? 'drag-over' : ''}`}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
           onDrop={(e) => {
@@ -510,10 +501,10 @@ export default function HumanizeTool() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Paste your AI-generated text here, or drag and drop a file..."
-            className="w-full min-h-[224px] resize-y rounded-xl bg-transparent p-4 text-base outline-none"
+            className="tool-textarea"
           />
           {dragOver && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-brand-soft/80 text-brand-dark font-semibold">
+            <div className="drag-overlay">
               📂 Drop your file here
             </div>
           )}
@@ -552,17 +543,15 @@ export default function HumanizeTool() {
         <button
           onClick={handleSubmit}
           disabled={processing || !text.trim()}
-          className={`mt-4 w-full rounded-xl px-4 py-4 text-lg font-semibold text-white transition ${
-            processing || !text.trim() ? 'cursor-not-allowed bg-slate-300' : 'bg-brand hover:bg-brand-dark'
-          }`}
+          className={`humanize-btn ${processing || !text.trim() ? '' : ''}`}
         >
           {processing ? `Humanizing ${progress}%...` : useLocalMode ? 'Humanize Text (Local)' : 'Humanize Text'}
         </button>
 
         {processing && (
-          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+          <div className="progress-bar">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-brand to-blue-400 transition-all duration-200"
+              className="progress-fill"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -573,7 +562,7 @@ export default function HumanizeTool() {
         )}
 
         {error && (
-          <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-[15px] text-red-700">
+          <div className="tool-error">
             {error}
           </div>
         )}
@@ -585,16 +574,12 @@ export default function HumanizeTool() {
               <h3 className="text-lg font-bold text-ink">Result</h3>
               <div className="flex items-center gap-2">
                 {/* P0-4: Clean/Diff视图切换 */}
-                <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                <div className="view-toggle">
                   {VIEW_MODES.map((vm) => (
                     <button
                       key={vm.id}
                       onClick={() => setViewMode(vm.id)}
-                      className={`px-3 py-1.5 text-sm font-semibold transition ${
-                        viewMode === vm.id
-                          ? 'bg-brand text-white'
-                          : 'bg-white text-slate-600 hover:bg-slate-50'
-                      }`}
+                      className={`view-toggle-btn ${viewMode === vm.id ? 'active' : ''}`}
                     >
                       {vm.label}
                     </button>
@@ -602,13 +587,13 @@ export default function HumanizeTool() {
                 </div>
                 <button
                   onClick={copyResult}
-                  className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200"
+                  className="tool-action-btn"
                 >
                   📋 Copy
                 </button>
                 <button
                   onClick={downloadTxt}
-                  className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-200"
+                  className="tool-action-btn"
                 >
                   ⬇ Download .txt
                 </button>
@@ -619,44 +604,41 @@ export default function HumanizeTool() {
             {viewMode === 'clean' ? (
               // Clean视图：显示纯文本结果
               chunks.map((c, i) => (
-                <div key={i} className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div key={i} className="result-card">
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-400">
                       Chunk {i + 1}/{chunks.length}
                     </span>
                     <span className="flex items-center gap-1 text-xs">
-                      <span className={`rounded px-2 py-0.5 font-semibold ${badgeClass(classifyMini(c.scoreBefore))}`}>
+                      <span className={`score-badge ${classifyMini(c.scoreBefore).toLowerCase()}`}>
                         {classifyMini(c.scoreBefore)} {c.scoreBefore}%
                       </span>
                       <span className="text-slate-300">→</span>
-                      <span className={`rounded px-2 py-0.5 font-semibold ${badgeClass(classifyMini(c.scoreAfter))}`}>
+                      <span className={`score-badge ${classifyMini(c.scoreAfter).toLowerCase()}`}>
                         {classifyMini(c.scoreAfter)} {c.scoreAfter}%
                       </span>
                     </span>
                   </div>
-                  <p className="mb-2 whitespace-pre-wrap text-sm text-slate-400 line-clamp-2">{c.before}</p>
-                  <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-slate-700">{c.after}</p>
+                  <p className="result-before">{c.before}</p>
+                  <p className="result-after">{c.after}</p>
                 </div>
               ))
             ) : (
               // Diff视图：显示差异对比
-              <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="result-card">
                 <div className="mb-3 flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-400">Full Diff View</span>
                   <span className="flex items-center gap-1 text-xs">
-                    <span className={`rounded px-2 py-0.5 font-semibold ${badgeClass(classifyMini(estimateAiScore(finalBefore)))}`}>
+                    <span className={`score-badge ${classifyMini(estimateAiScore(finalBefore)).toLowerCase()}`}>
                       {classifyMini(estimateAiScore(finalBefore))} {estimateAiScore(finalBefore)}%
                     </span>
                     <span className="text-slate-300">→</span>
-                    <span className={`rounded px-2 py-0.5 font-semibold ${badgeClass(classifyMini(estimateAiScore(finalText)))}`}>
+                    <span className={`score-badge ${classifyMini(estimateAiScore(finalText)).toLowerCase()}`}>
                       {classifyMini(estimateAiScore(finalText))} {estimateAiScore(finalText)}%
                     </span>
                   </span>
                 </div>
-                <div
-                  className="whitespace-pre-wrap text-[15px] leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: renderDiffToHTML(diff(finalBefore, finalText)) }}
-                />
+                <div className="result-after" dangerouslySetInnerHTML={{ __html: renderDiffToHTML(diff(finalBefore, finalText)) }} />
               </div>
             )}
 

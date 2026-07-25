@@ -73,7 +73,12 @@ export function scoreAI(text: string): AIScoreResult {
 
 const SYNONYMS: [string, string[]][] = [
   ['utilize', ['use', 'rely on']],
+  ['utilization', ['use', 'usage']],
+  ['utilized', ['used']],
+  ['utilizes', ['uses']],
   ['leverage', ['use', 'tap into']],
+  ['leverages', ['uses', 'taps into']],
+  ['leveraged', ['used', 'tapped into']],
   ['furthermore', ['also', 'plus', 'on top of that']],
   ['moreover', ['also', 'and', 'beyond that']],
   ['additionally', ['also', 'and', 'plus']],
@@ -98,6 +103,8 @@ const SYNONYMS: [string, string[]][] = [
   ['obtain', ['get']],
   ['assist', ['help']],
   ['demonstrate', ['show']],
+  ['demonstrated', ['shown', 'showed']],
+  ['demonstrates', ['shows']],
   ['approximately', ['about', 'around']],
   ['individuals', ['people']],
   ['in order to', ['to']],
@@ -108,11 +115,16 @@ const SYNONYMS: [string, string[]][] = [
   ['certainly!', ['', 'sure.']],
   ['certainly,', ['sure,', 'yeah,']],
   ['endeavor', ['try', 'work']],
+  ['endeavors', ['tries', 'works']],
   ['facilitate', ['help', 'make easier']],
+  ['facilitates', ['helps', 'makes easier']],
+  ['facilitated', ['helped', 'made easier']],
   ['encompass', ['cover', 'include']],
   ['encompasses', ['covers', 'includes']],
+  ['encompassed', ['covered', 'included']],
   ['exemplify', ['show', 'stand for']],
   ['exemplifies', ['shows', 'stands for']],
+  ['exemplified', ['shown', 'stood for']],
   ['myriad', ['many', 'tons of']],
   ['plethora', ['a lot', 'tons']],
   ['subsequently', ['then', 'after that']],
@@ -121,9 +133,13 @@ const SYNONYMS: [string, string[]][] = [
   ['ascertain', ['figure out', 'find out']],
   ['elucidate', ['explain', 'spell out']],
   ['elucidates', ['explains', 'spells out']],
+  ['elucidated', ['explained', 'spelled out']],
   ['exhibit', ['show']],
   ['exhibits', ['shows']],
+  ['exhibited', ['shown']],
   ['furnish', ['give', 'provide']],
+  ['furnishes', ['gives', 'provides']],
+  ['furnished', ['gave', 'provided']],
   ['essentially', ['basically', 'at its core']],
   ['ultimately', ['in the end', 'finally']],
   ['notwithstanding', ['still', 'even so']],
@@ -135,6 +151,9 @@ const SYNONYMS: [string, string[]][] = [
   ['a myriad of', ['many', 'lots of']],
   ['various', ['a few', 'different']],
   ['substantial', ['big', 'sizable']],
+  ['implementation', ['rollout', 'setup']],
+  ['implementing', ['putting in place', 'rolling out']],
+  ['implemented', ['put in place', 'rolled out']],
   ['significant', ['big', 'notable']],
   ['significantly', ['a lot', 'clearly']],
   ['remarkable', ['striking', 'notable']],
@@ -238,9 +257,13 @@ function swapSynonyms(text: string, strength: Strength, seed: number): string {
   const gate = strength === 'polish' ? 0 : strength === 'light' ? 0.4 : strength === 'aggressive' ? 1 : strength === 'deep' ? 1 : 0.8
   if (gate === 0) return text
   let out = text
-  SYNONYMS.forEach((pair, ki) => {
+  // 按 key 长度降序排列，确保 longer match 优先
+  const sorted = [...SYNONYMS].sort((a, b) => b[0].length - a[0].length)
+  sorted.forEach((pair, ki) => {
     const [key, opts] = pair
-    const re = new RegExp(key.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&'), 'gi')
+    // 使用单词边界：避免 "demonstrated" 被匹配成 "demonstrate"+"d" → "showd"
+    const escaped = key.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')
+    const re = new RegExp('(?<![a-zA-Z])' + escaped + '(?![a-zA-Z])', 'gi')
     let occ = 0
     out = out.replace(re, match => {
       occ++
