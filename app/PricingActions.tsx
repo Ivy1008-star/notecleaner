@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -8,7 +8,7 @@ import { PayPalButton } from './components/PayPalButton'
 // NEXT_PUBLIC_* 在构建期注入，前端可读。
 export const PAYPAL_ENABLED = Boolean(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID)
 
-// 通用「选档/升级」按钮：免费档直接进工具页，付费档调 /api/checkout 跳 Stripe。
+// 通用"选购/升级"按钮：免费档直接进工具页，付费档调 /api/checkout 走 Stripe。
 // 落地页定价区和工具页升级弹窗共用。
 export function PlanButton({
   tier,
@@ -68,8 +68,8 @@ export function PlanButton({
   )
 }
 
-// 付费档的支付区：默认走 Stripe 卡片支付；若 PayPal 已配置，并在下方并排显示
-// PayPal 订阅按钮。免费档不会用到本组件。
+// 付费档的支付区：
+// 当前 Stripe 未接入，只显示 PayPal 按钮（若已配置）。
 export function PlanPaymentButtons({
   tier,
   stripeLabel,
@@ -77,13 +77,11 @@ export function PlanPaymentButtons({
   tier: 'pro' | 'ultra'
   stripeLabel: string
 }) {
-  if (!PAYPAL_ENABLED) {
-    return <PlanButton tier={tier} label={stripeLabel} />
-  }
+  // Stripe 未接入，不显示 PlanButton；仅当 PayPal 已配置时才渲染支付按钮
+  if (!PAYPAL_ENABLED) return null
+
   return (
     <div className="flex flex-col gap-2">
-      <PlanButton tier={tier} label={stripeLabel} />
-      <div className="text-center text-xs text-slate-400">— or pay with PayPal —</div>
       <PayPalButton tier={tier} />
     </div>
   )
