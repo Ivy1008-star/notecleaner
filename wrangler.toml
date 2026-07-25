@@ -6,5 +6,6 @@ compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "."
 
 # Workers + Assets 配置
+# 注意：ASSETS 是保留名称，不能用于 Pages 项目，所以用 STATIC_AT
 main = "index.js"
-assets = { directory = "static", binding = "ASSETS" }
+assets = { directory = "static", binding = "STATIC_AT" }
