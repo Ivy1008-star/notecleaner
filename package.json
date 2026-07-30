@@ -6,7 +6,7 @@
                     "dev":  "next dev --hostname 0.0.0.0",
                     "build":  "next build",
                     "start":  "next start",
-                    "pages:build":  "next build \u0026\u0026 npx @cloudflare/next-on-pages",
+                    "pages:build":  "next build \u0026\u0026 npx @cloudflare/next-on-pages \u0026\u0026 node scripts/flatten-output.mjs",
                     "deploy:cf":  "wrangler pages deploy",
                     "deploy":  "node scripts/deploy.mjs"
                 },

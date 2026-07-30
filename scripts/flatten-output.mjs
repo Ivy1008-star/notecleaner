@@ -1,69 +1,50 @@
-/**
- * NoteCleaner Cloudflare Workers + Assets 输出扁平化补丁
- * 
- * 把 _index.js/index.js 复制到项目根目录作为 index.js（单文件），
- * 同时复制 static/ 到项目根目录。
- * Workers 集成会自动检测根目录的 index.js 作为入口。
- */
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
+// Flatten next-on-pages Vercel-format output into the flat layout that
+// Cloudflare Pages (Git integration) detects as Functions-enabled.
+//
+// Why: @cloudflare/next-on-pages 1.x emits a Vercel Build Output v3 layout:
+//   .vercel/output/
+//     config.json
+//     static/
+//       index.html
+//       _next/
+//       _worker.js/__next-on-pages-dist__/functions/...
+// Cloudflare's Git build does NOT auto-convert this nested layout, so the
+// worker is never picked up -> uses_functions: false -> every route 404s.
+//
+// This script moves everything from .vercel/output/static/* up to
+// .vercel/output/ (root), so the worker + function files sit at the output
+// root (exactly like the deployments that got uses_functions: true), and
+// removes the Vercel-format markers (config.json / builds.json) so Cloudflare
+// treats it as a plain static + _worker.js Pages project.
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const root = path.resolve(__dirname, '..')
-const outputDir = path.join(root, '.vercel', 'output')
-const staticDir = path.join(outputDir, 'static')
+import { existsSync, readdirSync, renameSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
 
-const log = (msg) => console.log(`[flatten] ${msg}`)
+const outDir = join(process.cwd(), '.vercel', 'output');
+const staticDir = join(outDir, 'static');
 
-function copyDir(src, dst) {
-  if (!fs.existsSync(src)) return false
-  if (fs.existsSync(dst)) {
-    fs.rmSync(dst, { recursive: true, force: true })
-  }
-  fs.cpSync(src, dst, { recursive: true })
-  return true
+if (!existsSync(staticDir)) {
+  console.log('[flatten] no .vercel/output/static found, nothing to do');
+  process.exit(0);
 }
 
-function main() {
-  // 1. 把 static/_index.js 移到 output 根目录
-  const srcWorker = path.join(staticDir, '_index.js')
-  const dstWorker = path.join(outputDir, '_index.js')
-  if (fs.existsSync(srcWorker)) {
-    fs.renameSync(srcWorker, dstWorker)
-    log('moved _index.js to output root')
-  } else {
-    log('_index.js not found in static/, skipping')
-  }
-
-  // 2. 删除 Vercel 格式标记文件
-  for (const file of ['config.json', 'builds.json']) {
-    const fp = path.join(outputDir, file)
-    if (fs.existsSync(fp)) {
-      fs.rmSync(fp)
-      log(`removed ${file}`)
-    }
-  }
-
-  // 3. 复制 _index.js/index.js 到项目根目录作为 index.js
-  const workerEntry = path.join(dstWorker, 'index.js')
-  const workerAtRoot = path.join(root, 'index.js')
-  if (fs.existsSync(workerEntry)) {
-    fs.cpSync(workerEntry, workerAtRoot)
-    log('copied _index.js/index.js -> index.js at project root')
-  }
-
-  // 4. 复制静态文件到项目根目录
-  const staticAtRoot = path.join(root, 'static')
-  if (fs.existsSync(staticDir)) {
-    if (fs.existsSync(staticAtRoot)) {
-      fs.rmSync(staticAtRoot, { recursive: true, force: true })
-    }
-    fs.cpSync(staticDir, staticAtRoot, { recursive: true })
-    log('copied static/ to project root')
-  }
-
-  log('flatten complete')
+for (const name of readdirSync(staticDir)) {
+  const src = join(staticDir, name);
+  const dest = join(outDir, name);
+  if (existsSync(dest)) rmSync(dest, { recursive: true, force: true });
+  renameSync(src, dest);
+  console.log('[flatten] moved', name);
 }
 
-main()
+rmSync(staticDir, { recursive: true, force: true });
+
+// Drop Vercel-format markers so Cloudflare doesn't try (and fail) to convert.
+for (const marker of ['config.json', 'builds.json']) {
+  const p = join(outDir, marker);
+  if (existsSync(p)) {
+    rmSync(p, { force: true });
+    console.log('[flatten] removed', marker);
+  }
+}
+
+console.log('[flatten] done -> worker + functions now at .vercel/output root');
